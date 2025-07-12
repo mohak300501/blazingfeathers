@@ -213,9 +213,9 @@ exports.handler = async (event, context) => {
 
     console.log('Google Drive upload successful, file ID:', file.data.id);
 
-    // Generate public URL
+    // Generate public URL using our proxy
     const fileId = file.data.id;
-    const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    const publicUrl = `${process.env.URL}/.netlify/functions/serve-image?fileId=${fileId}`;
     console.log('Generated public URL:', publicUrl);
     console.log('File ID:', fileId);
 
