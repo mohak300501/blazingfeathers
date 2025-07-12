@@ -115,11 +115,10 @@ exports.handler = async (event, context) => {
     // Delete from Google Drive
     if (photoData.driveFileId) {
       try {
-        // Clean the file ID - remove any trailing characters that might have been added
-        const cleanFileId = photoData.driveFileId.trim().replace(/[^a-zA-Z0-9_-]/g, '');
-        console.log('Original file ID:', photoData.driveFileId);
-        console.log('Cleaned file ID:', cleanFileId);
-        console.log('Deleting file from Google Drive:', cleanFileId);
+        // Use the file ID as-is - don't clean it
+        const fileId = photoData.driveFileId;
+        console.log('File ID:', fileId);
+        console.log('Deleting file from Google Drive:', fileId);
         
         // Get access token using the same auth setup as other functions
         const { google: googleApi } = require('googleapis');
@@ -145,7 +144,7 @@ exports.handler = async (event, context) => {
         const fileInfoResponse = await new Promise((resolve, reject) => {
           const options = {
             hostname: 'www.googleapis.com',
-            path: `/drive/v3/files/${cleanFileId}?fields=id,name,parents&supportsAllDrives=true`,
+            path: `/drive/v3/files/${fileId}?fields=id,name,parents&supportsAllDrives=true`,
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${accessToken.token}`,
@@ -179,67 +178,50 @@ exports.handler = async (event, context) => {
         
         console.log('Successfully accessed file info, proceeding with deletion...');
         
-        // Use Google Drive API library for deletion instead of direct HTTPS
-        console.log('Using Google Drive API library for deletion...');
+        // Use direct HTTPS with shared drive parameters (same approach as upload)
+        console.log('Using direct HTTPS delete with shared drive support...');
         
-        const drive = googleApi.drive({ version: 'v3', auth: authClient });
+        const deletePath = `/drive/v3/files/${fileId}?supportsAllDrives=true`;
+        console.log('Delete path:', deletePath);
         
-        try {
-          await drive.files.delete({
-            fileId: cleanFileId,
-            supportsAllDrives: true,
-          });
-          
-          console.log('File deleted successfully using Google Drive API library');
-        } catch (driveError) {
-          console.error('Error deleting from Drive:', driveError);
-          
-          // Try one more time with shared drive parameters via HTTPS
-          try {
-            console.log('Trying shared drive delete with HTTPS...');
-            
-            const sharedDeletePath = `/drive/v3/files/${cleanFileId}?supportsAllDrives=true`;
-            console.log('Shared drive delete path:', sharedDeletePath);
-            
-            const sharedDeleteResponse = await new Promise((resolve, reject) => {
-              const options = {
-                hostname: 'www.googleapis.com',
-                path: sharedDeletePath,
-                method: 'DELETE',
-                headers: {
-                  'Authorization': `Bearer ${accessToken.token}`,
-                }
-              };
+        const deleteResponse = await new Promise((resolve, reject) => {
+          const options = {
+            hostname: 'www.googleapis.com',
+            path: deletePath,
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+            }
+          };
 
-              const req = https.request(options, (res) => {
-                console.log('Shared drive delete response status:', res.statusCode);
-                
-                if (res.statusCode >= 200 && res.statusCode < 300) {
-                  console.log('Shared drive delete succeeded');
-                  resolve();
-                } else if (res.statusCode === 404) {
-                  console.log('File not found in shared drive delete');
-                  resolve();
-                } else {
-                  let errorData = '';
-                  res.on('data', (chunk) => errorData += chunk);
-                  res.on('end', () => {
-                    console.error('Shared drive delete error:', res.statusCode, errorData);
-                    reject(new Error(`Shared drive delete failed: ${res.statusCode} - ${errorData}`));
-                  });
-                }
+          const req = https.request(options, (res) => {
+            console.log('Delete response status:', res.statusCode);
+            
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              console.log('File deleted successfully');
+              resolve();
+            } else if (res.statusCode === 404) {
+              console.log('File not found (may have been deleted already)');
+              resolve(); // Don't treat 404 as error
+            } else {
+              let errorData = '';
+              res.on('data', (chunk) => errorData += chunk);
+              res.on('end', () => {
+                console.error('Delete error:', res.statusCode, errorData);
+                reject(new Error(`Delete failed: ${res.statusCode} - ${errorData}`));
               });
+            }
+          });
 
-              req.on('error', reject);
-              req.end();
-            });
-            
-            console.log('Shared drive delete completed');
-          } catch (sharedError) {
-            console.error('All delete methods failed:', sharedError);
-            // Continue with Firestore deletion even if Drive deletion fails
-          }
-        }
+          req.on('error', (error) => {
+            console.error('Delete request error:', error);
+            reject(error);
+          });
+
+          req.end();
+        });
+        
+        console.log('Google Drive deletion completed');
       } catch (driveError) {
         console.error('Error deleting from Drive:', driveError);
         // Continue with Firestore deletion even if Drive deletion fails
