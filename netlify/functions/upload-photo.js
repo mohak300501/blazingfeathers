@@ -63,10 +63,17 @@ exports.handler = async (event, context) => {
     await initializeDependencies();
     
     // Parse multipart form data
-    const formData = event.body;
+    let formData = event.body;
     console.log('Content-Type:', event.headers['content-type']);
     console.log('Body length:', formData.length);
     console.log('Body preview:', formData.substring(0, 500));
+    
+    // Check if body is base64 encoded
+    if (formData.startsWith('LS0tLS0t')) {
+      console.log('Detected base64 encoded body, decoding...');
+      formData = Buffer.from(formData, 'base64').toString('utf8');
+      console.log('Decoded body preview:', formData.substring(0, 500));
+    }
     
     let boundary = event.headers['content-type'].split('boundary=')[1];
     // Remove quotes if present
@@ -91,6 +98,7 @@ exports.handler = async (event, context) => {
       console.log(`Part ${i}:`, part.substring(0, 200) + '...');
       
       if (part.includes('Content-Disposition: form-data')) {
+        console.log(`Processing part ${i} with Content-Disposition`);
         const lines = part.split('\r\n');
         const contentDisposition = lines.find(line => line.startsWith('Content-Disposition: form-data'));
         
@@ -98,12 +106,14 @@ exports.handler = async (event, context) => {
           const nameMatch = contentDisposition.match(/name="([^"]+)"/);
           if (nameMatch) {
             const name = nameMatch[1];
-            console.log('Found field:', name);
+            console.log('Found field:', name, 'in part:', i);
             
             // Get the value after the headers
             const headerEndIndex = part.indexOf('\r\n\r\n');
+            console.log('Header end index:', headerEndIndex, 'for field:', name);
             if (headerEndIndex !== -1) {
               const value = part.substring(headerEndIndex + 4).trim();
+              console.log('Value length for', name, ':', value.length);
               
               if (name === 'photo') {
                 // Extract file data
