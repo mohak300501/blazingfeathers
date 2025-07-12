@@ -120,18 +120,17 @@ exports.handler = async (event, context) => {
                 const contentTypeMatch = lines.find(line => line.startsWith('Content-Type:'));
                 const contentType = contentTypeMatch ? contentTypeMatch.split(': ')[1] : 'image/jpeg';
                 
-                // Convert to base64 if not already
-                let base64Data = value;
-                if (!value.includes(';base64,')) {
-                  base64Data = Buffer.from(value, 'binary').toString('base64');
-                }
+                // The value should already be the raw file data (not base64)
+                // We need to convert it to base64 for storage
+                const base64Data = Buffer.from(value, 'binary').toString('base64');
                 
                 photoFile = {
                   data: base64Data,
                   contentType: contentType,
                   name: `bird_${Date.now()}.jpg`
                 };
-                console.log('Photo file found, size:', value.length, 'base64 size:', base64Data.length);
+                console.log('Photo file found, raw size:', value.length, 'base64 size:', base64Data.length);
+                console.log('Base64 data preview:', base64Data.substring(0, 100));
               } else if (name === 'birdId') {
                 birdId = value;
                 console.log('BirdId:', birdId);
@@ -189,34 +188,23 @@ exports.handler = async (event, context) => {
     // Convert base64 to buffer
     const fileBuffer = Buffer.from(photoFile.data, 'base64');
     console.log('File buffer size:', fileBuffer.length);
+    console.log('Buffer preview (first 50 bytes):', fileBuffer.subarray(0, 50));
 
     console.log('Starting Google Drive upload...');
     
-    // Use a different approach - create file with metadata first, then update content
+    // Use a simpler approach - create file with content in one step using multipart
     const file = await drive.files.create({
-      resource: {
-        name: fileMetadata.name,
-        parents: fileMetadata.parents,
-        supportsAllDrives: true,
-      },
-      fields: 'id',
-      supportsAllDrives: true,
-    });
-    
-    console.log('File created with ID:', file.data.id);
-    
-    // Now update the file with the actual content
-    await drive.files.update({
-      fileId: file.data.id,
+      resource: fileMetadata,
       media: {
         mimeType: photoFile.contentType,
         body: fileBuffer,
       },
       fields: 'id,webViewLink',
       supportsAllDrives: true,
+      uploadType: 'multipart',
     });
     
-    console.log('File content updated successfully');
+    console.log('Google Drive upload successful, file ID:', file.data.id);
 
     // Generate public URL
     const fileId = file.data.id;
