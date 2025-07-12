@@ -121,15 +121,28 @@ exports.handler = async (event, context) => {
     
     // Create multipart form data manually
     const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
-    const multipartBody = Buffer.concat([
+    
+    console.log('Creating multipart data with boundary:', boundary);
+    console.log('File metadata:', JSON.stringify(fileMetadata, null, 2));
+    console.log('Content type:', contentType);
+    console.log('File buffer size:', fileBuffer.length);
+    console.log('File buffer first 20 bytes:', fileBuffer.subarray(0, 20));
+    
+    // Create proper multipart form data for Google Drive API
+    const parts = [
       Buffer.from(`--${boundary}\r\n`),
       Buffer.from('Content-Type: application/json; charset=UTF-8\r\n\r\n'),
       Buffer.from(JSON.stringify(fileMetadata)),
       Buffer.from(`\r\n--${boundary}\r\n`),
-      Buffer.from(`Content-Type: ${contentType}\r\n\r\n`),
+      Buffer.from(`Content-Type: ${contentType}\r\n`),
+      Buffer.from(`Content-Transfer-Encoding: binary\r\n\r\n`),
       fileBuffer,
       Buffer.from(`\r\n--${boundary}--\r\n`)
-    ]);
+    ];
+    
+    const multipartBody = Buffer.concat(parts);
+    console.log('Multipart body total size:', multipartBody.length);
+    console.log('Multipart body first 200 bytes:', multipartBody.subarray(0, 200).toString());
 
     console.log('Making direct HTTPS request to Google Drive API...');
 
@@ -147,14 +160,27 @@ exports.handler = async (event, context) => {
       };
 
       const req = https.request(options, (res) => {
+        console.log('Google Drive API response status:', res.statusCode);
+        console.log('Google Drive API response headers:', res.headers);
+        
         let data = '';
         res.on('data', (chunk) => {
           data += chunk;
         });
         res.on('end', () => {
+          console.log('Google Drive API response body:', data);
+          
           if (res.statusCode >= 200 && res.statusCode < 300) {
-            resolve({ data: JSON.parse(data) });
+            try {
+              const parsedData = JSON.parse(data);
+              console.log('Parsed response data:', parsedData);
+              resolve({ data: parsedData });
+            } catch (parseError) {
+              console.error('Error parsing response:', parseError);
+              reject(new Error(`Failed to parse response: ${parseError.message}`));
+            }
           } else {
+            console.error('Google Drive API error response:', data);
             reject(new Error(`HTTP ${res.statusCode}: ${data}`));
           }
         });
