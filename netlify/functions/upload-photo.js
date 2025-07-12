@@ -186,21 +186,21 @@ exports.handler = async (event, context) => {
       contentType: photoFile.contentType 
     });
 
-    // Create a readable stream from the buffer
-    const { Readable } = require('stream');
-    const stream = new Readable();
-    stream.push(Buffer.from(photoFile.data, 'base64'));
-    stream.push(null);
+    // Convert base64 to buffer
+    const fileBuffer = Buffer.from(photoFile.data, 'base64');
+    console.log('File buffer size:', fileBuffer.length);
 
+    console.log('Starting Google Drive upload...');
     const file = await drive.files.create({
       resource: fileMetadata,
       media: {
         mimeType: photoFile.contentType,
-        body: stream,
+        body: fileBuffer,
       },
       fields: 'id,webViewLink',
       supportsAllDrives: true,
     });
+    console.log('Google Drive upload successful, file ID:', file.data.id);
 
     // Generate public URL
     const fileId = file.data.id;

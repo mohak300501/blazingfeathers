@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { doc, getDoc, collection, getDocs, query, orderBy, updateDoc, increment } from 'firebase/firestore'
+import { doc, getDoc, collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import PhotoCard from '../components/PhotoCard'
@@ -104,11 +104,8 @@ const BirdDetail = () => {
       // Remove photo from local state
       setPhotos(photos.filter(photo => photo.id !== photoId))
       
-      // Update bird photo count
+      // Update bird photo count locally (serverless function handles the actual update)
       if (bird) {
-        await updateDoc(doc(db, 'birds', id!), {
-          photoCount: increment(-1)
-        })
         setBird(prev => prev ? { ...prev, photoCount: prev.photoCount - 1 } : null)
       }
     } catch (error) {
@@ -149,11 +146,8 @@ const BirdDetail = () => {
       
       setPhotos([newPhoto, ...photos])
       
-      // Update bird photo count
+      // Update bird photo count locally (serverless function handles the actual update)
       if (bird) {
-        await updateDoc(doc(db, 'birds', id), {
-          photoCount: increment(1)
-        })
         setBird(prev => prev ? { ...prev, photoCount: prev.photoCount + 1 } : null)
       }
 
