@@ -106,7 +106,7 @@ exports.handler = async (event, context) => {
     const fileInfoResponse = await new Promise((resolve, reject) => {
       const options = {
         hostname: 'www.googleapis.com',
-        path: `/drive/v3/files/${fileId}?fields=id,name,parents,owners,permissions&supportsAllDrives=true`,
+        path: `/drive/v3/files/${fileId}?fields=id,name,parents,owners,permissions,createdTime,modifiedTime&supportsAllDrives=true`,
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken.token}`,
@@ -182,7 +182,23 @@ exports.handler = async (event, context) => {
         fileInfo: fileInfoResponse,
         permissions: permissionsResponse,
         serviceAccountEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        sharedDriveId: sharedDriveId
+        sharedDriveId: sharedDriveId,
+        isOwner: fileInfoResponse.owners?.some(owner => owner.emailAddress === process.env.FIREBASE_CLIENT_EMAIL),
+        hasPermission: permissionsResponse?.permissions?.some(perm => 
+          perm.emailAddress === process.env.FIREBASE_CLIENT_EMAIL
+        ),
+        permissionDetails: {
+          owners: fileInfoResponse.owners?.map(o => ({ email: o.emailAddress, displayName: o.displayName })),
+          serviceAccountInPermissions: permissionsResponse?.permissions?.filter(perm => 
+            perm.emailAddress === process.env.FIREBASE_CLIENT_EMAIL
+          ),
+          allPermissions: permissionsResponse?.permissions?.map(perm => ({
+            id: perm.id,
+            type: perm.type,
+            role: perm.role,
+            emailAddress: perm.emailAddress
+          }))
+        }
       }),
     };
 

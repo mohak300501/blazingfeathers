@@ -182,15 +182,9 @@ exports.handler = async (event, context) => {
         // Check if this is a shared drive file and add appropriate parameters
         const isSharedDrive = fileInfoResponse.parents && fileInfoResponse.parents.length > 0;
         
+        // Try simple delete first without extra parameters
         let deletePath = `/drive/v3/files/${cleanFileId}`;
-        if (isSharedDrive || sharedDriveId) {
-          deletePath += '?supportsAllDrives=true';
-          if (sharedDriveId) {
-            deletePath += `&corpora=drive&driveId=${sharedDriveId}`;
-          }
-        }
-        
-        console.log('Delete path:', deletePath, 'Is shared drive:', isSharedDrive, 'Shared drive ID:', sharedDriveId);
+        console.log('Trying simple delete path:', deletePath);
         
         const deleteResponse = await new Promise((resolve, reject) => {
           const options = {
@@ -202,8 +196,16 @@ exports.handler = async (event, context) => {
             }
           };
 
+          console.log('Delete request options:', {
+            hostname: options.hostname,
+            path: options.path,
+            method: options.method,
+            hasAuth: !!options.headers.Authorization
+          });
+
           const req = https.request(options, (res) => {
             console.log('Delete response status:', res.statusCode);
+            console.log('Delete response headers:', res.headers);
             
             if (res.statusCode >= 200 && res.statusCode < 300) {
               console.log('File deleted successfully from Google Drive');
@@ -254,8 +256,52 @@ exports.handler = async (event, context) => {
           console.log('Alternative delete method succeeded');
         } catch (alternativeError) {
           console.error('Alternative delete method also failed:', alternativeError);
-          // Continue with Firestore deletion even if Drive deletion fails
-          // This prevents the entire operation from failing if Drive is unavailable
+          
+          // Try one more time with shared drive parameters via HTTPS
+          try {
+            console.log('Trying shared drive delete with HTTPS...');
+            
+            const sharedDeletePath = `/drive/v3/files/${cleanFileId}?supportsAllDrives=true`;
+            console.log('Shared drive delete path:', sharedDeletePath);
+            
+            const sharedDeleteResponse = await new Promise((resolve, reject) => {
+              const options = {
+                hostname: 'www.googleapis.com',
+                path: sharedDeletePath,
+                method: 'DELETE',
+                headers: {
+                  'Authorization': `Bearer ${accessToken.token}`,
+                }
+              };
+
+              const req = https.request(options, (res) => {
+                console.log('Shared drive delete response status:', res.statusCode);
+                
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                  console.log('Shared drive delete succeeded');
+                  resolve();
+                } else if (res.statusCode === 404) {
+                  console.log('File not found in shared drive delete');
+                  resolve();
+                } else {
+                  let errorData = '';
+                  res.on('data', (chunk) => errorData += chunk);
+                  res.on('end', () => {
+                    console.error('Shared drive delete error:', res.statusCode, errorData);
+                    reject(new Error(`Shared drive delete failed: ${res.statusCode} - ${errorData}`));
+                  });
+                }
+              });
+
+              req.on('error', reject);
+              req.end();
+            });
+            
+            console.log('Shared drive delete completed');
+          } catch (sharedError) {
+            console.error('All delete methods failed:', sharedError);
+            // Continue with Firestore deletion even if Drive deletion fails
+          }
         }
       }
     }
