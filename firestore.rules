@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow all operations for authenticated users
+    // This is permissive for development - adjust for production
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Allow public read access to birds and photos
+    match /birds/{birdId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+      
+      match /photos/{photoId} {
+        allow read: if true;
+        allow write: if request.auth != null;
+      }
+    }
+  }
+} 

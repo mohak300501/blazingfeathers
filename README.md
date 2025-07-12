@@ -82,8 +82,11 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----E
 GOOGLE_DRIVE_SHARED_DRIVE_ID=your_shared_drive_id
 GOOGLE_DRIVE_FOLDER_ID=your_shared_drive_folder_id
 
-# Admin Configuration
+# Admin Configuration (frontend)
 VITE_ADMIN_EMAILS=admin@blazingfeathers.com,another_admin@example.com
+
+# Admin Configuration (serverless functions)
+ADMIN_EMAILS=admin@blazingfeathers.com,another_admin@example.com
 ```
 
 ### 5. Firestore Security Rules

@@ -195,15 +195,65 @@ exports.handler = async (event, context) => {
 
     console.log('Google Drive upload successful, file ID:', file.data.id);
 
-    // Generate public URL using our proxy
+    // Make the file publicly accessible
     const fileId = file.data.id;
-    const publicUrl = `${process.env.URL}/.netlify/functions/serve-image?fileId=${fileId}`;
-    console.log('Generated public URL:', publicUrl);
+    console.log('Making file publicly accessible...');
+    
+    const makePublicResponse = await new Promise((resolve, reject) => {
+      const publicOptions = {
+        hostname: 'www.googleapis.com',
+        path: `/drive/v3/files/${fileId}/permissions`,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': 'application/json',
+        }
+      };
+
+      const publicReq = https.request(publicOptions, (res) => {
+        console.log('Make public response status:', res.statusCode);
+        
+        let data = '';
+        res.on('data', (chunk) => data += chunk);
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            console.log('File made public successfully');
+            resolve();
+          } else {
+            console.error('Failed to make file public:', res.statusCode, data);
+            // Don't reject, just log the error and continue
+            resolve();
+          }
+        });
+      });
+
+      publicReq.on('error', (error) => {
+        console.error('Make public request error:', error);
+        // Don't reject, just log the error and continue
+        resolve();
+      });
+
+      const permissionData = {
+        role: 'reader',
+        type: 'anyone'
+      };
+
+      publicReq.write(JSON.stringify(permissionData));
+      publicReq.end();
+    });
+
+    // Generate direct Google Drive URL
+    const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    console.log('Generated direct Google Drive URL:', directUrl);
     console.log('File ID:', fileId);
+
+    // Use our proxy URL for better control
+    const proxyUrl = `${process.env.URL}/.netlify/functions/serve-image?fileId=${fileId}`;
+    console.log('Generated proxy URL:', proxyUrl);
 
     // Save to Firestore
     const photoRef = await db.collection('birds').doc(birdId).collection('photos').add({
-      url: publicUrl,
+      url: proxyUrl,
       driveFileId: fileId,
       location: location,
       dateOfCapture: new Date(dateOfCapture),
@@ -222,7 +272,7 @@ exports.handler = async (event, context) => {
     const birdData = birdDoc.data();
     if (!birdData.featuredPhoto) {
       await db.collection('birds').doc(birdId).update({
-        featuredPhoto: publicUrl,
+        featuredPhoto: proxyUrl,
       });
     }
 
@@ -234,7 +284,7 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         success: true,
         photoId: photoRef.id,
-        url: publicUrl,
+        url: proxyUrl,
         location: location,
         dateOfCapture: dateOfCapture,
         username: username,
