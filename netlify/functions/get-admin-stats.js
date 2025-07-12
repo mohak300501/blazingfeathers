@@ -1,4 +1,4 @@
-let admin, google, db, drive;
+let admin, db;
 
 // Lazy load dependencies to reduce memory usage
 async function initializeDependencies() {
@@ -16,20 +16,6 @@ async function initializeDependencies() {
     }
     
     db = admin.firestore();
-  }
-  
-  if (!google) {
-    google = require('googleapis');
-    
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.FIREBASE_CLIENT_EMAIL,
-        private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/drive'],
-    });
-    
-    drive = google.drive({ version: 'v3', auth });
   }
 }
 
@@ -61,13 +47,13 @@ exports.handler = async (event, context) => {
     // Initialize dependencies
     await initializeDependencies();
     
-    const { birdId, userId } = JSON.parse(event.body);
+    const { userId } = JSON.parse(event.body);
 
-    if (!birdId || !userId) {
+    if (!userId) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Missing required fields' }),
+        body: JSON.stringify({ error: 'Missing userId' }),
       };
     }
 
@@ -93,51 +79,39 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Get all photos for this bird
-    const photosSnapshot = await db.collection('birds').doc(birdId).collection('photos').get();
-    const photos = [];
-    photosSnapshot.forEach(doc => {
-      photos.push({ id: doc.id, ...doc.data() });
+    // Fetch admin statistics
+    const birdsSnapshot = await db.collection('birds').get();
+    const usersSnapshot = await db.collection('users').get();
+    
+    let totalPhotos = 0;
+    const birdsData = [];
+    
+    birdsSnapshot.forEach((doc) => {
+      const data = doc.data();
+      birdsData.push({
+        id: doc.id,
+        commonName: data.commonName,
+        scientificName: data.scientificName,
+        photoCount: data.photoCount || 0
+      });
+      totalPhotos += data.photoCount || 0;
     });
 
-    // Delete all photos from Google Drive
-    for (const photo of photos) {
-      if (photo.driveFileId) {
-        try {
-          await drive.files.delete({
-            fileId: photo.driveFileId,
-            supportsAllDrives: true,
-          });
-        } catch (driveError) {
-          console.error('Error deleting photo from Drive:', driveError);
-          // Continue with other deletions even if one fails
-        }
-      }
-    }
-
-    // Delete all photos from Firestore
-    const batch = db.batch();
-    photosSnapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-
-    // Delete the bird document
-    batch.delete(db.collection('birds').doc(birdId));
-
-    // Commit the batch
-    await batch.commit();
+    const stats = {
+      totalBirds: birdsData.length,
+      totalPhotos,
+      totalUsers: usersSnapshot.size,
+      birds: birdsData
+    };
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ 
-        success: true,
-        deletedPhotos: photos.length,
-      }),
+      body: JSON.stringify(stats),
     };
 
   } catch (error) {
-    console.error('Error deleting bird:', error);
+    console.error('Error fetching admin stats:', error);
     return {
       statusCode: 500,
       headers,

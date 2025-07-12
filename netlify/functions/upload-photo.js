@@ -69,7 +69,6 @@ exports.handler = async (event, context) => {
     let photoFile = null;
     let birdId = null;
     let userId = null;
-    let userEmail = null;
     let location = null;
     let dateOfCapture = null;
 
@@ -98,8 +97,6 @@ exports.handler = async (event, context) => {
               birdId = value;
             } else if (name === 'userId') {
               userId = value;
-            } else if (name === 'userEmail') {
-              userEmail = value;
             } else if (name === 'location') {
               location = value;
             } else if (name === 'dateOfCapture') {
@@ -111,6 +108,7 @@ exports.handler = async (event, context) => {
     }
 
     if (!photoFile || !birdId || !userId || !location || !dateOfCapture) {
+      console.error('Missing fields:', { photoFile: !!photoFile, birdId, userId, location, dateOfCapture });
       return {
         statusCode: 400,
         headers,
@@ -134,6 +132,7 @@ exports.handler = async (event, context) => {
     const fileMetadata = {
       name: photoFile.name,
       parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
+      supportsAllDrives: true,
     };
 
     const media = {
@@ -141,10 +140,18 @@ exports.handler = async (event, context) => {
       body: Buffer.from(photoFile.data, 'base64'),
     };
 
+    console.log('Uploading to Google Drive:', { 
+      folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
+      sharedDriveId: process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID,
+      fileName: photoFile.name,
+      contentType: photoFile.contentType 
+    });
+
     const file = await drive.files.create({
       resource: fileMetadata,
       media: media,
       fields: 'id,webViewLink',
+      supportsAllDrives: true,
     });
 
     // Generate public URL

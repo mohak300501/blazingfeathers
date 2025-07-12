@@ -110,6 +110,7 @@ exports.handler = async (event, context) => {
       try {
         await drive.files.delete({
           fileId: photoData.driveFileId,
+          supportsAllDrives: true,
         });
       } catch (driveError) {
         console.error('Error deleting from Drive:', driveError);

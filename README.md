@@ -78,9 +78,8 @@ FIREBASE_PROJECT_ID=your_project_id
 FIREBASE_CLIENT_EMAIL=your_service_account_email
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
 
-# Google Drive API
-FIREBASE_CLIENT_EMAIL=your_google_service_account_email
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour Google private key here\n-----END PRIVATE KEY-----\n"
+# Google Drive API (uses same Firebase service account)
+GOOGLE_DRIVE_SHARED_DRIVE_ID=your_shared_drive_id
 GOOGLE_DRIVE_FOLDER_ID=your_shared_drive_folder_id
 
 # Admin Configuration
@@ -131,6 +130,8 @@ service cloud.firestore {
 **Note**: Function dependencies are included in the main package.json to avoid memory issues during build.
 
 **Admin Configuration**: Set `VITE_ADMIN_EMAILS` to a comma-separated list of admin email addresses. These users will have admin privileges in the application. Make sure to set this environment variable in both your local `.env` file and in your Netlify dashboard.
+
+**Google Drive Setup**: The app uses the same Firebase service account for Google Drive access. You need to set up a shared drive and provide both the shared drive ID and folder ID within that drive.
 
 ## Project Structure
 

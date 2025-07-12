@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react'
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'
-import { db } from '../config/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
 import { Bird, Plus, Trash2, Settings, Users, Camera } from 'lucide-react'
@@ -38,34 +36,29 @@ const AdminPanel = () => {
 
   const fetchData = async () => {
     try {
-      // Fetch birds
-      const birdsQuery = query(collection(db, 'birds'), orderBy('commonName'))
-      const birdsSnapshot = await getDocs(birdsQuery)
-      
-      const birdsData: Bird[] = []
-      let totalPhotos = 0
-      
-      birdsSnapshot.forEach((doc) => {
-        const data = doc.data()
-        birdsData.push({
-          id: doc.id,
-          commonName: data.commonName,
-          scientificName: data.scientificName,
-          photoCount: data.photoCount || 0
-        })
-        totalPhotos += data.photoCount || 0
+      // Call Netlify function to fetch admin data
+      const response = await fetch('/.netlify/functions/get-admin-stats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.uid
+        }),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch admin data')
+      }
+
+      const data = await response.json()
       
-      setBirds(birdsData)
-
-      // Fetch users count
-      const usersSnapshot = await getDocs(collection(db, 'users'))
-      const totalUsers = usersSnapshot.size
-
+      setBirds(data.birds)
       setStats({
-        totalBirds: birdsData.length,
-        totalPhotos,
-        totalUsers
+        totalBirds: data.totalBirds,
+        totalPhotos: data.totalPhotos,
+        totalUsers: data.totalUsers
       })
     } catch (error) {
       console.error('Error fetching admin data:', error)
