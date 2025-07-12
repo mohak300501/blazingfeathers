@@ -130,7 +130,7 @@ service cloud.firestore {
 
 **Note**: Function dependencies are included in the main package.json to avoid memory issues during build.
 
-**Admin Configuration**: Set `VITE_ADMIN_EMAILS` to a comma-separated list of admin email addresses. These users will have admin privileges in the application.
+**Admin Configuration**: Set `VITE_ADMIN_EMAILS` to a comma-separated list of admin email addresses. These users will have admin privileges in the application. Make sure to set this environment variable in both your local `.env` file and in your Netlify dashboard.
 
 ## Project Structure
 

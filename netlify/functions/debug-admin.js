@@ -47,17 +47,17 @@ exports.handler = async (event, context) => {
     // Initialize dependencies
     await initializeDependencies();
     
-    const { commonName, scientificName, userId } = JSON.parse(event.body);
+    const { userId } = JSON.parse(event.body);
 
-    if (!commonName || !scientificName || !userId) {
+    if (!userId) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Missing required fields' }),
+        body: JSON.stringify({ error: 'Missing userId' }),
       };
     }
 
-    // Check if user is admin
+    // Get user data
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
       return {
@@ -71,50 +71,19 @@ exports.handler = async (event, context) => {
     const adminEmails = process.env.VITE_ADMIN_EMAILS ? process.env.VITE_ADMIN_EMAILS.split(',').map(email => email.trim()) : ['admin@blazingfeathers.com'];
     const isAdmin = adminEmails.includes(userData.email);
 
-    if (!isAdmin) {
-      return {
-        statusCode: 403,
-        headers,
-        body: JSON.stringify({ error: 'Admin privileges required' }),
-      };
-    }
-
-    // Check if bird already exists (case-insensitive)
-    const birdsQuery = await db.collection('birds')
-      .where('commonName', '==', commonName)
-      .get();
-
-    if (!birdsQuery.empty) {
-      return {
-        statusCode: 409,
-        headers,
-        body: JSON.stringify({ error: 'Bird with this common name already exists' }),
-      };
-    }
-
-    // Add bird to Firestore
-    const birdRef = await db.collection('birds').add({
-      commonName: commonName.trim(),
-      scientificName: scientificName.trim(),
-      photoCount: 0,
-      createdAt: new Date(),
-      addedBy: userId,
-      addedByUsername: userData.username
-    });
-
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
-        success: true,
-        birdId: birdRef.id,
-        commonName,
-        scientificName
+        userEmail: userData.email,
+        adminEmails: adminEmails,
+        isAdmin: isAdmin,
+        envVar: process.env.VITE_ADMIN_EMAILS || 'NOT_SET'
       }),
     };
 
   } catch (error) {
-    console.error('Error adding bird:', error);
+    console.error('Error in debug function:', error);
     return {
       statusCode: 500,
       headers,
