@@ -179,11 +179,6 @@ exports.handler = async (event, context) => {
       supportsAllDrives: true,
     };
 
-    const media = {
-      mimeType: photoFile.contentType,
-      body: Buffer.from(photoFile.data, 'base64'),
-    };
-
     console.log('Uploading to Google Drive:', { 
       folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
       sharedDriveId: process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID,
@@ -191,9 +186,18 @@ exports.handler = async (event, context) => {
       contentType: photoFile.contentType 
     });
 
+    // Create a readable stream from the buffer
+    const { Readable } = require('stream');
+    const stream = new Readable();
+    stream.push(Buffer.from(photoFile.data, 'base64'));
+    stream.push(null);
+
     const file = await drive.files.create({
       resource: fileMetadata,
-      media: media,
+      media: {
+        mimeType: photoFile.contentType,
+        body: stream,
+      },
       fields: 'id,webViewLink',
       supportsAllDrives: true,
     });
