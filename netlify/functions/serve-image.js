@@ -86,45 +86,78 @@ exports.handler = async (event, context) => {
     const accessToken = await authClient.getAccessToken();
     console.log('Got access token successfully');
 
-    // Instead of exposing the access token in URL, let's use a different approach
-    // We'll create a temporary signed URL that doesn't expose the token
-    const drive = googleApi.drive({ version: 'v3', auth: authClient });
+    // Fetch the image data directly and stream it back
+    const https = require('https');
     
-    try {
-      // Get file metadata to verify access
-      const fileMetadata = await drive.files.get({
-        fileId: fileId,
-        fields: 'id,name,mimeType,size',
-        supportsAllDrives: true,
-      });
-      
-      console.log('File metadata retrieved:', fileMetadata.data);
-      
-      // Create a temporary signed URL (this is a workaround since Google Drive doesn't support signed URLs directly)
-      // We'll use a different approach - create a temporary public link
-      const tempUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-      
-      console.log('Generated temporary URL:', tempUrl);
-
-      // Return a redirect to the temporary URL
-      return {
-        statusCode: 302,
+    console.log('Fetching image data from Google Drive...');
+    
+    const response = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'www.googleapis.com',
+        path: `/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+        method: 'GET',
         headers: {
-          ...headers,
-          'Location': tempUrl,
-          'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
-        },
-        body: '',
+          'Authorization': `Bearer ${accessToken.token}`,
+        }
       };
-      
-    } catch (error) {
-      console.error('Error getting file metadata:', error);
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify({ error: 'File not found or access denied' }),
-      };
-    }
+
+      const req = https.request(options, (res) => {
+        console.log('Google Drive response status:', res.statusCode);
+        console.log('Google Drive response headers:', res.headers);
+        
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          const chunks = [];
+          res.on('data', (chunk) => {
+            chunks.push(chunk);
+          });
+          res.on('end', () => {
+            const fileBuffer = Buffer.concat(chunks);
+            console.log('Image data received, size:', fileBuffer.length);
+            
+            resolve({
+              statusCode: res.statusCode,
+              contentType: res.headers['content-type'] || 'image/jpeg',
+              body: fileBuffer
+            });
+          });
+        } else {
+          let errorData = '';
+          res.on('data', (chunk) => errorData += chunk);
+          res.on('end', () => {
+            console.error('Google Drive API error:', res.statusCode, errorData);
+            reject(new Error(`Google Drive API error: ${res.statusCode} - ${errorData}`));
+          });
+        }
+      });
+
+      req.on('error', (error) => {
+        console.error('Request error:', error);
+        reject(error);
+      });
+
+      req.end();
+    });
+
+    // Set appropriate headers for image serving
+    const imageHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Content-Type': response.contentType,
+      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+      'Content-Length': response.body.length.toString(),
+    };
+
+    console.log('Returning image with headers:', imageHeaders);
+    console.log('Image size:', response.body.length);
+
+    // Return the image data as base64
+    return {
+      statusCode: 200,
+      headers: imageHeaders,
+      body: response.body.toString('base64'),
+      isBase64Encoded: true,
+    };
 
   } catch (error) {
     console.error('Error serving image:', error);
