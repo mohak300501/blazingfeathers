@@ -19,7 +19,8 @@ async function initializeDependencies() {
   }
   
   if (!google) {
-    google = require('googleapis');
+    const { google: googleApi } = require('googleapis');
+    google = googleApi;
     
     const auth = new google.auth.GoogleAuth({
       credentials: {
@@ -63,8 +64,19 @@ exports.handler = async (event, context) => {
     
     // Parse multipart form data
     const formData = event.body;
-    const boundary = event.headers['content-type'].split('boundary=')[1];
+    console.log('Content-Type:', event.headers['content-type']);
+    console.log('Body length:', formData.length);
+    console.log('Body preview:', formData.substring(0, 500));
+    
+    let boundary = event.headers['content-type'].split('boundary=')[1];
+    // Remove quotes if present
+    if (boundary && boundary.startsWith('"') && boundary.endsWith('"')) {
+      boundary = boundary.slice(1, -1);
+    }
+    console.log('Boundary:', boundary);
+    
     const parts = formData.split(`--${boundary}`);
+    console.log('Number of parts:', parts.length);
     
     let photoFile = null;
     let birdId = null;
@@ -72,7 +84,12 @@ exports.handler = async (event, context) => {
     let location = null;
     let dateOfCapture = null;
 
-    for (const part of parts) {
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i].trim();
+      if (!part || part === '--') continue; // Skip empty parts
+      
+      console.log(`Part ${i}:`, part.substring(0, 200) + '...');
+      
       if (part.includes('Content-Disposition: form-data')) {
         const lines = part.split('\r\n');
         const contentDisposition = lines.find(line => line.startsWith('Content-Disposition: form-data'));
@@ -81,26 +98,43 @@ exports.handler = async (event, context) => {
           const nameMatch = contentDisposition.match(/name="([^"]+)"/);
           if (nameMatch) {
             const name = nameMatch[1];
-            const value = lines.slice(3).join('\r\n').trim();
+            console.log('Found field:', name);
             
-            if (name === 'photo') {
-              // Extract file data
-              const contentTypeMatch = lines.find(line => line.startsWith('Content-Type:'));
-              const contentType = contentTypeMatch ? contentTypeMatch.split(': ')[1] : 'image/jpeg';
+            // Get the value after the headers
+            const headerEndIndex = part.indexOf('\r\n\r\n');
+            if (headerEndIndex !== -1) {
+              const value = part.substring(headerEndIndex + 4).trim();
               
-              photoFile = {
-                data: value,
-                contentType: contentType,
-                name: `bird_${Date.now()}.jpg`
-              };
-            } else if (name === 'birdId') {
-              birdId = value;
-            } else if (name === 'userId') {
-              userId = value;
-            } else if (name === 'location') {
-              location = value;
-            } else if (name === 'dateOfCapture') {
-              dateOfCapture = value;
+              if (name === 'photo') {
+                // Extract file data
+                const contentTypeMatch = lines.find(line => line.startsWith('Content-Type:'));
+                const contentType = contentTypeMatch ? contentTypeMatch.split(': ')[1] : 'image/jpeg';
+                
+                // Convert to base64 if not already
+                let base64Data = value;
+                if (!value.includes(';base64,')) {
+                  base64Data = Buffer.from(value, 'binary').toString('base64');
+                }
+                
+                photoFile = {
+                  data: base64Data,
+                  contentType: contentType,
+                  name: `bird_${Date.now()}.jpg`
+                };
+                console.log('Photo file found, size:', value.length, 'base64 size:', base64Data.length);
+              } else if (name === 'birdId') {
+                birdId = value;
+                console.log('BirdId:', birdId);
+              } else if (name === 'userId') {
+                userId = value;
+                console.log('UserId:', userId);
+              } else if (name === 'location') {
+                location = value;
+                console.log('Location:', location);
+              } else if (name === 'dateOfCapture') {
+                dateOfCapture = value;
+                console.log('DateOfCapture:', dateOfCapture);
+              }
             }
           }
         }

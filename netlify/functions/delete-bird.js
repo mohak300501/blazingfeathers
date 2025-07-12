@@ -19,7 +19,8 @@ async function initializeDependencies() {
   }
   
   if (!google) {
-    google = require('googleapis');
+    const { google: googleApi } = require('googleapis');
+    google = googleApi;
     
     const auth = new google.auth.GoogleAuth({
       credentials: {
