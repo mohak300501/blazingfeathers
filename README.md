@@ -125,7 +125,8 @@ service cloud.firestore {
 3. Set the build command: `npm run build`
 4. Set the publish directory: `dist`
 5. Add all environment variables in Netlify dashboard
-6. Deploy!
+6. Set Node.js version to 18.20.8 in Netlify build settings
+7. Deploy!
 
 ## Project Structure
 
