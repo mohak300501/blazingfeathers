@@ -1,29 +1,37 @@
-const { google } = require('googleapis');
-const admin = require('firebase-admin');
+let admin, google, db, drive;
 
-// Initialize Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-    }),
-  });
+// Lazy load dependencies to reduce memory usage
+async function initializeDependencies() {
+  if (!admin) {
+    admin = require('firebase-admin');
+    
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID,
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        }),
+      });
+    }
+    
+    db = admin.firestore();
+  }
+  
+  if (!google) {
+    google = require('googleapis');
+    
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      },
+      scopes: ['https://www.googleapis.com/auth/drive'],
+    });
+    
+    drive = google.drive({ version: 'v3', auth });
+  }
 }
-
-const db = admin.firestore();
-
-// Initialize Google Drive API
-const auth = new google.auth.GoogleAuth({
-  credentials: {
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-  },
-  scopes: ['https://www.googleapis.com/auth/drive'],
-});
-
-const drive = google.drive({ version: 'v3', auth });
 
 exports.handler = async (event, context) => {
   // Enable CORS
@@ -50,6 +58,9 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Initialize dependencies
+    await initializeDependencies();
+    
     const { birdId, photoId, userId } = JSON.parse(event.body);
 
     if (!birdId || !photoId || !userId) {

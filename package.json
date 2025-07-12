@@ -5,12 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm run install:functions && vite build",
+    "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx,ts,tsx",
     "lint:fix": "eslint . --ext js,jsx,ts,tsx --fix",
-    "build:netlify": "vite build",
-    "install:functions": "cd netlify/functions && npm install && cd ../.."
+    "build:netlify": "vite build"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -20,11 +19,8 @@
     "googleapis": "^128.0.0",
     "lucide-react": "^0.294.0",
     "date-fns": "^2.30.0",
-    "react-hot-toast": "^2.4.1"
-  },
-  "netlifyFunctions": {
-    "firebase-admin": "^11.11.0",
-    "googleapis": "^128.0.0"
+    "react-hot-toast": "^2.4.1",
+    "firebase-admin": "^11.11.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
