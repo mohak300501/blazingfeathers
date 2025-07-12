@@ -112,16 +112,37 @@ exports.handler = async (event, context) => {
 
     console.log('Uploading to Google Drive via proxy...');
 
-    // Use a different upload method that doesn't require streams
-    const file = await drive.files.create({
-      requestBody: fileMetadata,
-      media: {
-        mimeType: contentType,
-        body: fileBuffer,
+    // Use gaxios directly to avoid the googleapis library issues
+    const { gaxios } = require('gaxios');
+    
+    // Get access token
+    const authClient = await auth.getClient();
+    const accessToken = await authClient.getAccessToken();
+    
+    // Create multipart form data manually
+    const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
+    const multipartBody = Buffer.concat([
+      Buffer.from(`--${boundary}\r\n`),
+      Buffer.from('Content-Type: application/json; charset=UTF-8\r\n\r\n'),
+      Buffer.from(JSON.stringify(fileMetadata)),
+      Buffer.from(`\r\n--${boundary}\r\n`),
+      Buffer.from(`Content-Type: ${contentType}\r\n\r\n`),
+      fileBuffer,
+      Buffer.from(`\r\n--${boundary}--\r\n`)
+    ]);
+
+    const response = await gaxios.request({
+      method: 'POST',
+      url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true',
+      headers: {
+        'Authorization': `Bearer ${accessToken.token}`,
+        'Content-Type': `multipart/related; boundary=${boundary}`,
+        'Content-Length': multipartBody.length.toString()
       },
-      fields: 'id,webViewLink',
-      supportsAllDrives: true,
+      data: multipartBody
     });
+
+    const file = { data: response.data };
 
     console.log('Google Drive upload successful, file ID:', file.data.id);
 
