@@ -82,7 +82,8 @@ exports.handler = async (event, context) => {
     }
 
     const userData = userDoc.data();
-    const isAdmin = process.env.ADMIN_EMAILS?.split(',').includes(userData.email) || false;
+    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(email => email.trim()) : ['admin@blazingfeathers.com'];
+    const isAdmin = adminEmails.includes(userData.email);
 
     if (!isAdmin) {
       return {

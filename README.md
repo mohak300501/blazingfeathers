@@ -84,7 +84,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour Google private key here\
 GOOGLE_DRIVE_FOLDER_ID=your_shared_drive_folder_id
 
 # Admin Configuration
-ADMIN_EMAILS=admin@blazingfeathers.com,another_admin@example.com
+VITE_ADMIN_EMAILS=admin@blazingfeathers.com,another_admin@example.com
 ```
 
 ### 5. Firestore Security Rules
@@ -129,6 +129,8 @@ service cloud.firestore {
 7. Deploy!
 
 **Note**: Function dependencies are included in the main package.json to avoid memory issues during build.
+
+**Admin Configuration**: Set `VITE_ADMIN_EMAILS` to a comma-separated list of admin email addresses. These users will have admin privileges in the application.
 
 ## Project Structure
 

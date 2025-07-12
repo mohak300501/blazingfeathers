@@ -22,11 +22,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Admin emails list - this should be moved to environment variables in production
-const ADMIN_EMAILS = [
-  'admin@blazingfeathers.com',
-  // Add more admin emails here
-]
+// Admin emails list from environment variables
+const ADMIN_EMAILS = import.meta.env.VITE_ADMIN_EMAILS 
+  ? import.meta.env.VITE_ADMIN_EMAILS.split(',').map(email => email.trim())
+  : ['admin@blazingfeathers.com'] // fallback default
 
 export const useAuth = () => {
   const context = useContext(AuthContext)
