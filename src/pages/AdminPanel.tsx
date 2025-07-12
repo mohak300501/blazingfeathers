@@ -25,6 +25,7 @@ const AdminPanel = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [adding, setAdding] = useState(false)
   const [cleaning, setCleaning] = useState(false)
+  const [testing, setTesting] = useState(false)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -165,6 +166,44 @@ const AdminPanel = () => {
       toast.error(error.message || 'Failed to cleanup file IDs')
     } finally {
       setCleaning(false)
+    }
+  }
+
+  const handleTestPermissions = async () => {
+    const fileId = prompt('Enter the Google Drive file ID to test (e.g., 1KxFrJmvMNei3JRSzV5iaHWNvLDl3fEQC):');
+    if (!fileId) return;
+
+    setTesting(true)
+    try {
+      const response = await fetch('/.netlify/functions/test-file-permissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileId: fileId.trim(),
+          userId: user?.uid
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to test permissions')
+      }
+
+      const result = await response.json()
+      console.log('Permission test result:', result)
+      toast.success('Permission test completed! Check console for details.')
+      
+      // Show key info in toast
+      if (result.fileInfo) {
+        toast.success(`File: ${result.fileInfo.name}, Owners: ${result.fileInfo.owners?.map(o => o.emailAddress).join(', ')}`)
+      }
+    } catch (error) {
+      console.error('Error testing permissions:', error)
+      toast.error(error.message || 'Failed to test permissions')
+    } finally {
+      setTesting(false)
     }
   }
 
@@ -312,6 +351,32 @@ const AdminPanel = () => {
                 <>
                   <Settings className="h-4 w-4" />
                   <span>Clean Up</span>
+                </>
+              )}
+            </button>
+          </div>
+          
+          <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div>
+              <h3 className="text-lg font-medium text-blue-800">Test File Permissions</h3>
+              <p className="text-blue-700 text-sm">
+                Test the service account's permissions on a specific Google Drive file.
+              </p>
+            </div>
+            <button
+              onClick={handleTestPermissions}
+              disabled={testing}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              {testing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                  <span>Testing...</span>
+                </>
+              ) : (
+                <>
+                  <Settings className="h-4 w-4" />
+                  <span>Test Permissions</span>
                 </>
               )}
             </button>

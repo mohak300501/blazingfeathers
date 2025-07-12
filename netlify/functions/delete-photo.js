@@ -138,10 +138,64 @@ exports.handler = async (event, context) => {
         // Use https module directly for better control
         const https = require('https');
         
+        // Get shared drive ID if available
+        const sharedDriveId = process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID;
+        
+        // First, try to get file info to check if we have access
+        const fileInfoResponse = await new Promise((resolve, reject) => {
+          const options = {
+            hostname: 'www.googleapis.com',
+            path: `/drive/v3/files/${cleanFileId}?fields=id,name,parents&supportsAllDrives=true`,
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+            }
+          };
+
+          const req = https.request(options, (res) => {
+            console.log('File info response status:', res.statusCode);
+            
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+              if (res.statusCode >= 200 && res.statusCode < 300) {
+                try {
+                  const fileInfo = JSON.parse(data);
+                  console.log('File info:', fileInfo);
+                  resolve(fileInfo);
+                } catch (parseError) {
+                  reject(new Error(`Failed to parse file info: ${parseError.message}`));
+                }
+              } else {
+                console.error('File info error:', res.statusCode, data);
+                reject(new Error(`File info failed: ${res.statusCode} - ${data}`));
+              }
+            });
+          });
+
+          req.on('error', reject);
+          req.end();
+        });
+        
+        console.log('Successfully accessed file info, proceeding with deletion...');
+        
+        // Check if this is a shared drive file and add appropriate parameters
+        const isSharedDrive = fileInfoResponse.parents && fileInfoResponse.parents.length > 0;
+        
+        let deletePath = `/drive/v3/files/${cleanFileId}`;
+        if (isSharedDrive || sharedDriveId) {
+          deletePath += '?supportsAllDrives=true';
+          if (sharedDriveId) {
+            deletePath += `&corpora=drive&driveId=${sharedDriveId}`;
+          }
+        }
+        
+        console.log('Delete path:', deletePath, 'Is shared drive:', isSharedDrive, 'Shared drive ID:', sharedDriveId);
+        
         const deleteResponse = await new Promise((resolve, reject) => {
           const options = {
             hostname: 'www.googleapis.com',
-            path: `/drive/v3/files/${cleanFileId}?supportsAllDrives=true`,
+            path: deletePath,
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${accessToken.token}`,
@@ -161,7 +215,11 @@ exports.handler = async (event, context) => {
               let errorData = '';
               res.on('data', (chunk) => errorData += chunk);
               res.on('end', () => {
-                console.error('Google Drive delete error:', res.statusCode, errorData);
+                console.error('Google Drive delete error details:', {
+                  statusCode: res.statusCode,
+                  headers: res.headers,
+                  body: errorData
+                });
                 reject(new Error(`Google Drive delete failed: ${res.statusCode} - ${errorData}`));
               });
             }
@@ -178,8 +236,27 @@ exports.handler = async (event, context) => {
         console.log('Google Drive deletion completed');
       } catch (driveError) {
         console.error('Error deleting from Drive:', driveError);
-        // Continue with Firestore deletion even if Drive deletion fails
-        // This prevents the entire operation from failing if Drive is unavailable
+        
+        // Try alternative method using Google Drive API library
+        try {
+          console.log('Trying alternative delete method with Google Drive API library...');
+          
+          const { google: googleApi } = require('googleapis');
+          const drive = googleApi.drive({ version: 'v3', auth: authClient });
+          
+          await drive.files.delete({
+            fileId: cleanFileId,
+            supportsAllDrives: true,
+            corpora: sharedDriveId ? 'drive' : undefined,
+            driveId: sharedDriveId,
+          });
+          
+          console.log('Alternative delete method succeeded');
+        } catch (alternativeError) {
+          console.error('Alternative delete method also failed:', alternativeError);
+          // Continue with Firestore deletion even if Drive deletion fails
+          // This prevents the entire operation from failing if Drive is unavailable
+        }
       }
     }
 
