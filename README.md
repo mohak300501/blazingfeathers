@@ -79,8 +79,8 @@ FIREBASE_CLIENT_EMAIL=your_service_account_email
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
 
 # Google Drive API
-GOOGLE_CLIENT_EMAIL=your_google_service_account_email
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour Google private key here\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=your_google_service_account_email
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour Google private key here\n-----END PRIVATE KEY-----\n"
 GOOGLE_DRIVE_FOLDER_ID=your_shared_drive_folder_id
 
 # Admin Configuration
