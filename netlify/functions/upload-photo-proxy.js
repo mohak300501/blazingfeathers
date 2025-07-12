@@ -112,12 +112,12 @@ exports.handler = async (event, context) => {
 
     console.log('Uploading to Google Drive via proxy...');
 
-    // Use gaxios directly to avoid the googleapis library issues
-    const { gaxios } = require('gaxios');
-    
     // Get access token
     const authClient = await auth.getClient();
     const accessToken = await authClient.getAccessToken();
+    
+    // Use https module directly to avoid library issues
+    const https = require('https');
     
     // Create multipart form data manually
     const boundary = '----WebKitFormBoundary' + Math.random().toString(36).substring(2);
@@ -131,18 +131,44 @@ exports.handler = async (event, context) => {
       Buffer.from(`\r\n--${boundary}--\r\n`)
     ]);
 
-    const response = await gaxios.request({
-      method: 'POST',
-      url: 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true',
-      headers: {
-        'Authorization': `Bearer ${accessToken.token}`,
-        'Content-Type': `multipart/related; boundary=${boundary}`,
-        'Content-Length': multipartBody.length.toString()
-      },
-      data: multipartBody
+    console.log('Making direct HTTPS request to Google Drive API...');
+
+    // Make direct HTTPS request
+    const response = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'www.googleapis.com',
+        path: '/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true',
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': `multipart/related; boundary=${boundary}`,
+          'Content-Length': multipartBody.length.toString()
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+        res.on('end', () => {
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve({ data: JSON.parse(data) });
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(error);
+      });
+
+      req.write(multipartBody);
+      req.end();
     });
 
-    const file = { data: response.data };
+    const file = response;
 
     console.log('Google Drive upload successful, file ID:', file.data.id);
 
