@@ -213,6 +213,58 @@ exports.handler = async (event, context) => {
 
     console.log('Google Drive upload successful, file ID:', file.data.id);
 
+    // Set explicit permissions for the service account to ensure it can delete the file later
+    try {
+      console.log('Setting explicit permissions for service account...');
+      
+      const permissionResponse = await new Promise((resolve, reject) => {
+        const permissionOptions = {
+          hostname: 'www.googleapis.com',
+          path: `/drive/v3/files/${file.data.id}/permissions?supportsAllDrives=true`,
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken.token}`,
+            'Content-Type': 'application/json',
+          }
+        };
+
+        const permissionData = {
+          role: 'fileOrganizer',
+          type: 'user',
+          emailAddress: process.env.FIREBASE_CLIENT_EMAIL
+        };
+
+        const req = https.request(permissionOptions, (res) => {
+          console.log('Permission response status:', res.statusCode);
+          
+          let data = '';
+          res.on('data', (chunk) => data += chunk);
+          res.on('end', () => {
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              console.log('Permission set successfully');
+              resolve();
+            } else {
+              console.error('Permission setting failed:', res.statusCode, data);
+              // Don't fail the upload if permission setting fails
+              resolve();
+            }
+          });
+        });
+
+        req.on('error', (error) => {
+          console.error('Permission request error:', error);
+          // Don't fail the upload if permission setting fails
+          resolve();
+        });
+
+        req.write(JSON.stringify(permissionData));
+        req.end();
+      });
+    } catch (permissionError) {
+      console.error('Error setting permissions:', permissionError);
+      // Don't fail the upload if permission setting fails
+    }
+
     // Generate proxy URL
     const fileId = file.data.id;
     const proxyUrl = `${process.env.URL}/.netlify/functions/serve-image?fileId=${fileId}`;

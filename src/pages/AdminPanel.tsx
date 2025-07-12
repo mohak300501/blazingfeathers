@@ -26,6 +26,7 @@ const AdminPanel = () => {
   const [adding, setAdding] = useState(false)
   const [cleaning, setCleaning] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [fixingPermissions, setFixingPermissions] = useState(false)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -207,6 +208,43 @@ const AdminPanel = () => {
     }
   }
 
+  const handleFixPermissions = async () => {
+    if (!confirm('This will fix permissions on all existing photos so they can be deleted. Continue?')) {
+      return
+    }
+
+    setFixingPermissions(true)
+    try {
+      const response = await fetch('/.netlify/functions/fix-file-permissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.uid
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fix permissions')
+      }
+
+      const result = await response.json()
+      toast.success(`Permissions fix completed! Fixed ${result.fixedPermissions} out of ${result.totalPhotos} photos.`)
+      
+      if (result.errors && result.errors.length > 0) {
+        console.warn('Some errors occurred during permission fix:', result.errors)
+        toast.error(`${result.errors.length} errors occurred. Check console for details.`)
+      }
+    } catch (error) {
+      console.error('Error fixing permissions:', error)
+      toast.error(error.message || 'Failed to fix permissions')
+    } finally {
+      setFixingPermissions(false)
+    }
+  }
+
   if (!isAdmin) {
     return (
       <div className="text-center py-12">
@@ -377,6 +415,32 @@ const AdminPanel = () => {
                 <>
                   <Settings className="h-4 w-4" />
                   <span>Test Permissions</span>
+                </>
+              )}
+            </button>
+          </div>
+          
+          <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div>
+              <h3 className="text-lg font-medium text-green-800">Fix File Permissions</h3>
+              <p className="text-green-700 text-sm">
+                Add explicit permissions to all existing photos so they can be deleted.
+              </p>
+            </div>
+            <button
+              onClick={handleFixPermissions}
+              disabled={fixingPermissions}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              {fixingPermissions ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                  <span>Fixing...</span>
+                </>
+              ) : (
+                <>
+                  <Settings className="h-4 w-4" />
+                  <span>Fix Permissions</span>
                 </>
               )}
             </button>
