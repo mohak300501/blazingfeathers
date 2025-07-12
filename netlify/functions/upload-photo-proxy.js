@@ -69,23 +69,7 @@ exports.handler = async (event, context) => {
     const userData = userDoc.data();
     const username = userData.username;
 
-    // Use a different approach - store the file data in Firestore temporarily
-    // and create a separate function to process it
-    const tempFileRef = await db.collection('temp_uploads').add({
-      fileData: fileData,
-      fileName: fileName,
-      contentType: contentType,
-      birdId: birdId,
-      userId: userId,
-      location: location,
-      dateOfCapture: dateOfCapture,
-      username: username,
-      createdAt: new Date(),
-      processed: false
-    });
-
-    // Trigger the actual upload process
-    // For now, we'll process it directly here, but this could be a separate function
+    // Initialize Google Drive API
     const google = require('googleapis');
     const { google: googleApi } = google;
     
@@ -96,8 +80,6 @@ exports.handler = async (event, context) => {
       },
       scopes: ['https://www.googleapis.com/auth/drive'],
     });
-    
-    const drive = googleApi.drive({ version: 'v3', auth });
 
     // Convert base64 to buffer
     const fileBuffer = Buffer.from(fileData, 'base64');
@@ -244,8 +226,7 @@ exports.handler = async (event, context) => {
       });
     }
 
-    // Clean up temp file
-    await tempFileRef.delete();
+
 
     return {
       statusCode: 200,
