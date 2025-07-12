@@ -122,11 +122,13 @@ service cloud.firestore {
 
 1. Push your code to GitHub
 2. Connect your repository to Netlify
-3. Set the build command: `npm run build`
+3. The build command is automatically set in `netlify.toml`: `npm run install:functions && npm run build`
 4. Set the publish directory: `dist`
 5. Add all environment variables in Netlify dashboard
 6. Set Node.js version to 18.20.8 in Netlify build settings
 7. Deploy!
+
+**Note**: The build process automatically installs function dependencies using the Netlify Functions Install Core plugin.
 
 ## Project Structure
 
