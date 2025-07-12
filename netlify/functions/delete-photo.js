@@ -109,13 +109,64 @@ exports.handler = async (event, context) => {
     // Delete from Google Drive
     if (photoData.driveFileId) {
       try {
-        await drive.files.delete({
-          fileId: photoData.driveFileId,
-          supportsAllDrives: true,
+        console.log('Deleting file from Google Drive:', photoData.driveFileId);
+        
+        // Get access token using the same auth setup as other functions
+        const { google: googleApi } = require('googleapis');
+        
+        const auth = new googleApi.auth.GoogleAuth({
+          credentials: {
+            client_email: process.env.FIREBASE_CLIENT_EMAIL,
+            private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          },
+          scopes: ['https://www.googleapis.com/auth/drive'],
         });
+        
+        const authClient = await auth.getClient();
+        const accessToken = await authClient.getAccessToken();
+        
+        // Use https module directly for better control
+        const https = require('https');
+        
+        const deleteResponse = await new Promise((resolve, reject) => {
+          const options = {
+            hostname: 'www.googleapis.com',
+            path: `/drive/v3/files/${photoData.driveFileId}?supportsAllDrives=true`,
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+            }
+          };
+
+          const req = https.request(options, (res) => {
+            console.log('Delete response status:', res.statusCode);
+            
+            if (res.statusCode >= 200 && res.statusCode < 300) {
+              console.log('File deleted successfully from Google Drive');
+              resolve();
+            } else {
+              let errorData = '';
+              res.on('data', (chunk) => errorData += chunk);
+              res.on('end', () => {
+                console.error('Google Drive delete error:', res.statusCode, errorData);
+                reject(new Error(`Google Drive delete failed: ${res.statusCode} - ${errorData}`));
+              });
+            }
+          });
+
+          req.on('error', (error) => {
+            console.error('Delete request error:', error);
+            reject(error);
+          });
+
+          req.end();
+        });
+        
+        console.log('Google Drive deletion completed');
       } catch (driveError) {
         console.error('Error deleting from Drive:', driveError);
         // Continue with Firestore deletion even if Drive deletion fails
+        // This prevents the entire operation from failing if Drive is unavailable
       }
     }
 
