@@ -4,11 +4,11 @@
 
 @layer base {
   html {
-    scroll-behavior: smooth;
+    font-family: 'Inter', system-ui, sans-serif;
   }
   
   body {
-    @apply bg-gray-50 text-gray-900 font-sans;
+    @apply bg-gray-50 text-gray-900;
   }
 }
 
@@ -26,24 +26,24 @@
   }
   
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden;
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
   }
   
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors duration-200;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
   }
   
-  .loading-spinner {
-    @apply animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600;
+  .photo-card {
+    @apply bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300;
+  }
+  
+  .bird-card {
+    @apply bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1;
   }
 }
 
 @layer utilities {
-  .text-shadow {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .backdrop-blur {
-    backdrop-filter: blur(8px);
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-bird-500 bg-clip-text text-transparent;
   }
 } 

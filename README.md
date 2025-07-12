@@ -1,25 +1,26 @@
-# BlazingFeathers 🦅
+# Blazing Feathers - Bird Photography Webapp
 
-A beautiful, community-driven bird photography webapp built with React, Firebase, and Google Drive integration.
+A beautiful, modern web application for bird photography enthusiasts. Built with React, Firebase, and Google Drive integration.
 
 ## Features
 
-- **Beautiful UI**: Modern, responsive design with Tailwind CSS
-- **Authentication**: Firebase Auth with email verification
-- **Bird Gallery**: Browse and search bird species
-- **Photo Upload**: Upload high-quality bird photos to Google Drive
-- **Admin Controls**: Admin users can manage bird species and photos
-- **Community Driven**: Users can contribute their own bird photographs
-- **Serverless**: Built with Netlify Functions for scalability
+- 🔐 **Authentication**: Firebase Auth with email verification
+- 🐦 **Bird Gallery**: Browse and search through bird species
+- 📸 **Photo Upload**: Members can upload photos with location and date
+- 👑 **Admin Panel**: Manage birds and view system statistics
+- 🗂️ **Google Drive Integration**: Photos stored in shared Google Drive folder
+- 🚀 **Serverless Functions**: Netlify functions for backend operations
+- 📱 **Responsive Design**: Beautiful UI that works on all devices
 
 ## Tech Stack
 
-- **Frontend**: React 18, React Router, Tailwind CSS
-- **Authentication**: Firebase Authentication
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
+- **Authentication**: Firebase Auth
 - **Database**: Firestore
 - **File Storage**: Google Drive API
 - **Deployment**: Netlify
-- **Functions**: Netlify Serverless Functions
+- **Icons**: Lucide React
+- **Notifications**: React Hot Toast
 
 ## Prerequisites
 
@@ -27,128 +28,122 @@ Before setting up this project, you'll need:
 
 1. **Firebase Project**: Create a Firebase project and enable Authentication and Firestore
 2. **Google Cloud Project**: Set up Google Drive API and create a service account
-3. **Netlify Account**: For deployment and serverless functions
-4. **GitHub Account**: For version control
+3. **Google Drive**: Create a shared drive folder for photos
+4. **Netlify Account**: For deployment and serverless functions
 
 ## Setup Instructions
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/blazingfeathers.git
-cd blazingfeathers
+git clone https://github.com/yourusername/blazing-feathers.git
+cd blazing-feathers
 ```
 
 ### 2. Firebase Setup
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Create a new project
+2. Create a new project or select existing one
 3. Enable Authentication with Email/Password
-4. Create a Firestore database
-5. Get your Firebase config from Project Settings > General > Your apps
-6. Update the Firestore security rules with the provided `firestore.rules`
+4. Enable Firestore Database
+5. Go to Project Settings > Service Accounts
+6. Generate a new private key (download the JSON file)
+7. Copy the Firebase config values
 
 ### 3. Google Drive Setup
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing one
 3. Enable Google Drive API
-4. Create a Service Account:
-   - Go to IAM & Admin > Service Accounts
-   - Create a new service account
-   - Download the JSON key file
-   - Share your Google Drive folder with the service account email
-5. Note down the folder ID from your shared Google Drive folder
+4. Create a service account and download the JSON key
+5. Create a shared drive folder for photos
+6. Share the folder with the service account email
 
-### 4. Environment Configuration
+### 4. Environment Variables
 
-1. Copy `env.example` to `.env`:
-   ```bash
-   cp env.example .env
-   ```
+1. Copy `env.example` to `.env`
+2. Fill in all the required values:
 
-2. Fill in your environment variables:
-   ```env
-   # Firebase Configuration
-   REACT_APP_FIREBASE_API_KEY=your_firebase_api_key
-   REACT_APP_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-   REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-   REACT_APP_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   REACT_APP_FIREBASE_APP_ID=your_app_id
+```env
+# Firebase Configuration
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123456789:web:abcdef123456
 
-   # Google Drive Configuration
-   GOOGLE_PROJECT_ID=your_google_project_id
-   GOOGLE_PRIVATE_KEY_ID=your_private_key_id
-   GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
-   GOOGLE_CLIENT_EMAIL=your_service_account_email@your_project.iam.gserviceaccount.com
-   GOOGLE_CLIENT_ID=your_client_id
-   GOOGLE_DRIVE_FOLDER_ID=your_shared_drive_folder_id
+# Firebase Admin SDK (for serverless functions)
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your_service_account_email
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour private key here\n-----END PRIVATE KEY-----\n"
 
-   # Admin Configuration
-   ADMIN_EMAILS=admin@blazingfeathers.com,another_admin@example.com
-   ```
+# Google Drive API
+GOOGLE_CLIENT_EMAIL=your_google_service_account_email
+GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYour Google private key here\n-----END PRIVATE KEY-----\n"
+GOOGLE_DRIVE_FOLDER_ID=your_shared_drive_folder_id
 
-### 5. Install Dependencies
-
-```bash
-# Install main dependencies
-npm install
-
-# Install function dependencies
-cd functions
-npm install
-cd ..
+# Admin Configuration
+ADMIN_EMAILS=admin@blazingfeathers.com,another_admin@example.com
 ```
 
-### 6. Development
+### 5. Firestore Security Rules
 
-```bash
-# Start development server
-npm run dev
+Set up the following Firestore security rules:
+
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Birds are publicly readable, only admins can write
+    match /birds/{birdId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+        request.auth.token.email in ['admin@blazingfeathers.com'];
+      
+      // Photos are publicly readable, owners and admins can write
+      match /photos/{photoId} {
+        allow read: if true;
+        allow write: if request.auth != null && 
+          (resource.data.uploadedBy == request.auth.uid || 
+           request.auth.token.email in ['admin@blazingfeathers.com']);
+      }
+    }
+  }
+}
 ```
 
-The app will be available at `http://localhost:8888`
-
-### 7. Deployment
-
-#### Option A: Deploy to Netlify
+### 6. Deploy to Netlify
 
 1. Push your code to GitHub
 2. Connect your repository to Netlify
 3. Set the build command: `npm run build`
 4. Set the publish directory: `dist`
-5. Add all environment variables in Netlify's environment settings
+5. Add all environment variables in Netlify dashboard
 6. Deploy!
-
-#### Option B: Manual Deployment
-
-```bash
-# Build the project
-npm run build
-
-# Deploy to Netlify CLI
-netlify deploy --prod
-```
 
 ## Project Structure
 
 ```
 blazingfeathers/
 ├── src/
-│   ├── components/          # React components
-│   ├── contexts/           # React contexts
+│   ├── components/          # Reusable UI components
+│   ├── contexts/           # React contexts (Auth)
 │   ├── pages/              # Page components
-│   ├── services/           # API services
-│   ├── styles/             # CSS styles
-│   ├── firebase/           # Firebase configuration
-│   ├── App.js              # Main app component
-│   └── index.js            # Entry point
-├── functions/              # Netlify serverless functions
+│   ├── config/             # Configuration files
+│   ├── App.tsx             # Main app component
+│   └── main.tsx            # App entry point
+├── netlify/
+│   └── functions/          # Serverless functions
 ├── public/                 # Static assets
+├── package.json            # Dependencies
 ├── netlify.toml           # Netlify configuration
-├── tailwind.config.js     # Tailwind CSS configuration
-└── package.json           # Dependencies and scripts
+└── README.md              # This file
 ```
 
 ## Features in Detail
@@ -156,35 +151,33 @@ blazingfeathers/
 ### Authentication
 - Email/password registration and login
 - Email verification required
-- Protected routes for authenticated users
+- Protected routes for logged-in users
 - Admin role checking
 
 ### Bird Management
-- Public bird gallery (no login required)
-- Admin-only bird species addition
-- Search functionality by common and scientific names
-- Detailed bird pages with photo galleries
+- Public bird gallery with search
+- Admin-only bird addition/deletion
+- Bird details with photo galleries
 
 ### Photo Management
-- Upload photos to Google Drive
-- Location and date capture tracking
-- User attribution for all photos
-- Photo deletion (own photos only, or all for admins)
+- Upload photos with location and date
 - High-quality image display
+- Delete permissions (owner or admin)
+- Automatic Google Drive integration
 
 ### Admin Features
-- Add new bird species
-- Delete any bird species (removes all associated photos)
+- Add/delete bird species
 - Delete any photo
-- Admin status indicated in UI
+- View system statistics
+- User management
 
-## Security
+## Security Features
 
-- Firestore security rules prevent unauthorized access
-- Admin checks on both client and server side
-- File upload validation and size limits
-- CORS protection on serverless functions
-- Environment variables for sensitive data
+- Firebase Auth with email verification
+- Firestore security rules
+- Admin-only operations
+- File upload validation
+- CORS protection on functions
 
 ## Contributing
 
@@ -196,20 +189,16 @@ blazingfeathers/
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ## Support
 
-If you encounter any issues or have questions:
-
-1. Check the Firebase and Google Drive setup
-2. Verify all environment variables are set correctly
-3. Check the browser console for errors
-4. Review the Netlify function logs
+For support, please open an issue on GitHub or contact the development team.
 
 ## Acknowledgments
 
-- Built with React and Firebase
-- Styled with Tailwind CSS
-- Icons from Lucide React
-- Deployed on Netlify 
+- Firebase for authentication and database
+- Google Drive API for file storage
+- Netlify for hosting and serverless functions
+- Tailwind CSS for styling
+- Lucide React for icons 
