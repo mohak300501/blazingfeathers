@@ -58,17 +58,90 @@ exports.handler = async (event, context) => {
 
     console.log('Serving image for file ID:', fileId);
 
-    // Since files are now public, we can use a direct URL
-    const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    // Get access token for Google Drive API
+    const google = require('googleapis');
+    const { google: googleApi } = google;
     
-    // Return a redirect to the public Google Drive URL
-    return {
-      statusCode: 302,
-      headers: {
-        ...headers,
-        'Location': directUrl,
+    const auth = new googleApi.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.FIREBASE_CLIENT_EMAIL,
+        private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
       },
-      body: '',
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+    });
+    
+    const authClient = await auth.getClient();
+    const accessToken = await authClient.getAccessToken();
+
+    // Use https module to fetch the file directly with service account credentials
+    const https = require('https');
+    
+    const response = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'www.googleapis.com',
+        path: `/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        console.log('Google Drive file response status:', res.statusCode);
+        console.log('Google Drive file response headers:', res.headers);
+        
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          const chunks = [];
+          res.on('data', (chunk) => {
+            chunks.push(chunk);
+          });
+          res.on('end', () => {
+            const fileBuffer = Buffer.concat(chunks);
+            console.log('File size received:', fileBuffer.length);
+            console.log('File first 20 bytes:', fileBuffer.subarray(0, 20));
+            
+            resolve({
+              statusCode: res.statusCode,
+              contentType: res.headers['content-type'] || 'image/jpeg',
+              body: fileBuffer
+            });
+          });
+        } else {
+          let errorData = '';
+          res.on('data', (chunk) => errorData += chunk);
+          res.on('end', () => {
+            console.error('Google Drive API error:', res.statusCode, errorData);
+            reject(new Error(`Google Drive API error: ${res.statusCode} - ${errorData}`));
+          });
+        }
+      });
+
+      req.on('error', (error) => {
+        console.error('Request error:', error);
+        reject(error);
+      });
+
+      req.end();
+    });
+
+    // Set appropriate headers for image serving
+    const imageHeaders = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Content-Type': response.contentType,
+      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+      'Content-Length': response.body.length.toString(),
+    };
+
+    console.log('Returning image with headers:', imageHeaders);
+    console.log('Image size:', response.body.length);
+
+    return {
+      statusCode: 200,
+      headers: imageHeaders,
+      body: response.body.toString('base64'),
+      isBase64Encoded: true,
     };
 
   } catch (error) {

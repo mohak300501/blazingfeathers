@@ -195,56 +195,8 @@ exports.handler = async (event, context) => {
 
     console.log('Google Drive upload successful, file ID:', file.data.id);
 
-    // Make the file publicly accessible
-    const fileId = file.data.id;
-    console.log('Making file publicly accessible...');
-    
-    const makePublicResponse = await new Promise((resolve, reject) => {
-      const publicOptions = {
-        hostname: 'www.googleapis.com',
-        path: `/drive/v3/files/${fileId}/permissions`,
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken.token}`,
-          'Content-Type': 'application/json',
-        }
-      };
-
-      const publicReq = https.request(publicOptions, (res) => {
-        console.log('Make public response status:', res.statusCode);
-        
-        let data = '';
-        res.on('data', (chunk) => data += chunk);
-        res.on('end', () => {
-          if (res.statusCode >= 200 && res.statusCode < 300) {
-            console.log('File made public successfully');
-            resolve();
-          } else {
-            console.error('Failed to make file public:', res.statusCode, data);
-            // Don't reject, just log the error and continue
-            resolve();
-          }
-        });
-      });
-
-      publicReq.on('error', (error) => {
-        console.error('Make public request error:', error);
-        // Don't reject, just log the error and continue
-        resolve();
-      });
-
-      const permissionData = {
-        role: 'reader',
-        type: 'anyone'
-      };
-
-      publicReq.write(JSON.stringify(permissionData));
-      publicReq.end();
-    });
-
     // Generate direct Google Drive URL
-    const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-    console.log('Generated direct Google Drive URL:', directUrl);
+    const fileId = file.data.id;
     console.log('File ID:', fileId);
 
     // Use our proxy URL for better control
