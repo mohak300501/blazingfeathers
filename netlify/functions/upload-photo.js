@@ -1,4 +1,4 @@
-let admin, google, db, drive;
+let admin, db;
 
 // Lazy load dependencies to reduce memory usage
 async function initializeDependencies() {
@@ -18,20 +18,7 @@ async function initializeDependencies() {
     db = admin.firestore();
   }
   
-  if (!google) {
-    const { google: googleApi } = require('googleapis');
-    google = googleApi;
-    
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.FIREBASE_CLIENT_EMAIL,
-        private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/drive'],
-    });
-    
-    drive = google.drive({ version: 'v3', auth });
-  }
+
 }
 
 exports.handler = async (event, context) => {
@@ -171,81 +158,37 @@ exports.handler = async (event, context) => {
     const userData = userDoc.data();
     const username = userData.username;
 
-    // Upload to Google Drive
-    const fileMetadata = {
-      name: photoFile.name,
-      parents: [process.env.GOOGLE_DRIVE_FOLDER_ID],
-      supportsAllDrives: true,
-    };
-
-    console.log('Uploading to Google Drive:', { 
-      folderId: process.env.GOOGLE_DRIVE_FOLDER_ID,
-      sharedDriveId: process.env.GOOGLE_DRIVE_SHARED_DRIVE_ID,
-      fileName: photoFile.name,
-      contentType: photoFile.contentType 
-    });
-
-    // Convert base64 to buffer
-    const fileBuffer = Buffer.from(photoFile.data, 'base64');
-    console.log('File buffer size:', fileBuffer.length);
-    console.log('Buffer preview (first 50 bytes):', fileBuffer.subarray(0, 50));
-
-    console.log('Starting Google Drive upload...');
+    // Use the proxy function for Google Drive upload
+    console.log('Calling upload proxy function...');
     
-    // Use a simpler approach - create file with content in one step using multipart
-    const file = await drive.files.create({
-      resource: fileMetadata,
-      media: {
-        mimeType: photoFile.contentType,
-        body: fileBuffer,
+    const proxyResponse = await fetch(`${process.env.URL}/.netlify/functions/upload-photo-proxy`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      fields: 'id,webViewLink',
-      supportsAllDrives: true,
-      uploadType: 'multipart',
-    });
-    
-    console.log('Google Drive upload successful, file ID:', file.data.id);
-
-    // Generate public URL
-    const fileId = file.data.id;
-    const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-
-    // Save to Firestore
-    const photoRef = await db.collection('birds').doc(birdId).collection('photos').add({
-      url: publicUrl,
-      driveFileId: fileId,
-      location: location,
-      dateOfCapture: new Date(dateOfCapture),
-      uploadedBy: userId,
-      uploadedByUsername: username,
-      uploadedAt: new Date(),
+      body: JSON.stringify({
+        fileData: photoFile.data,
+        fileName: photoFile.name,
+        contentType: photoFile.contentType,
+        birdId: birdId,
+        userId: userId,
+        location: location,
+        dateOfCapture: dateOfCapture,
+      }),
     });
 
-    // Update bird's photo count
-    await db.collection('birds').doc(birdId).update({
-      photoCount: admin.firestore.FieldValue.increment(1),
-    });
-
-    // Set featured photo if it's the first one
-    const birdDoc = await db.collection('birds').doc(birdId).get();
-    const birdData = birdDoc.data();
-    if (!birdData.featuredPhoto) {
-      await db.collection('birds').doc(birdId).update({
-        featuredPhoto: publicUrl,
-      });
+    if (!proxyResponse.ok) {
+      const errorData = await proxyResponse.json();
+      throw new Error(errorData.error || 'Proxy upload failed');
     }
+
+    const result = await proxyResponse.json();
+    console.log('Proxy upload successful:', result);
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        success: true,
-        photoId: photoRef.id,
-        url: publicUrl,
-        location: location,
-        dateOfCapture: dateOfCapture,
-        username: username,
-      }),
+      body: JSON.stringify(result),
     };
 
   } catch (error) {
