@@ -128,71 +128,88 @@ exports.handler = async (event, context) => {
     console.log('File buffer size:', fileBuffer.length);
     console.log('File buffer first 20 bytes:', fileBuffer.subarray(0, 20));
     
-    // Create proper multipart form data for Google Drive API
-    const parts = [
-      Buffer.from(`--${boundary}\r\n`),
-      Buffer.from('Content-Type: application/json; charset=UTF-8\r\n\r\n'),
-      Buffer.from(JSON.stringify(fileMetadata)),
-      Buffer.from(`\r\n--${boundary}\r\n`),
-      Buffer.from(`Content-Type: ${contentType}\r\n`),
-      Buffer.from(`Content-Transfer-Encoding: binary\r\n\r\n`),
-      fileBuffer,
-      Buffer.from(`\r\n--${boundary}--\r\n`)
-    ];
+    // Try using the resumable upload method instead
+    console.log('Using resumable upload method...');
     
-    const multipartBody = Buffer.concat(parts);
-    console.log('Multipart body total size:', multipartBody.length);
-    console.log('Multipart body first 200 bytes:', multipartBody.subarray(0, 200).toString());
-
-    console.log('Making direct HTTPS request to Google Drive API...');
-
-    // Make direct HTTPS request
-    const response = await new Promise((resolve, reject) => {
-      const options = {
+    // First, get the upload URL
+    const sessionResponse = await new Promise((resolve, reject) => {
+      const sessionOptions = {
         hostname: 'www.googleapis.com',
-        path: '/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true',
+        path: '/upload/drive/v3/files?uploadType=resumable&fields=id,webViewLink&supportsAllDrives=true',
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken.token}`,
-          'Content-Type': `multipart/related; boundary=${boundary}`,
-          'Content-Length': multipartBody.length.toString()
+          'Content-Type': 'application/json',
+          'X-Upload-Content-Type': contentType,
+          'X-Upload-Content-Length': fileBuffer.length.toString()
         }
       };
 
-      const req = https.request(options, (res) => {
-        console.log('Google Drive API response status:', res.statusCode);
-        console.log('Google Drive API response headers:', res.headers);
+      const sessionReq = https.request(sessionOptions, (res) => {
+        console.log('Session response status:', res.statusCode);
+        console.log('Session response headers:', res.headers);
+        
+        if (res.statusCode === 200) {
+          const location = res.headers.location;
+          console.log('Upload session location:', location);
+          resolve(location);
+        } else {
+          let data = '';
+          res.on('data', (chunk) => data += chunk);
+          res.on('end', () => {
+            reject(new Error(`Session creation failed: ${res.statusCode} - ${data}`));
+          });
+        }
+      });
+
+      sessionReq.on('error', reject);
+      sessionReq.write(JSON.stringify(fileMetadata));
+      sessionReq.end();
+    });
+
+    // Now upload the file content
+    const uploadResponse = await new Promise((resolve, reject) => {
+      const uploadUrl = new URL(sessionResponse);
+      const uploadOptions = {
+        hostname: uploadUrl.hostname,
+        path: uploadUrl.pathname + uploadUrl.search,
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken.token}`,
+          'Content-Type': contentType,
+          'Content-Length': fileBuffer.length.toString()
+        }
+      };
+
+      const uploadReq = https.request(uploadOptions, (res) => {
+        console.log('Upload response status:', res.statusCode);
+        console.log('Upload response headers:', res.headers);
         
         let data = '';
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
+        res.on('data', (chunk) => data += chunk);
         res.on('end', () => {
-          console.log('Google Drive API response body:', data);
+          console.log('Upload response body:', data);
           
           if (res.statusCode >= 200 && res.statusCode < 300) {
             try {
               const parsedData = JSON.parse(data);
-              console.log('Parsed response data:', parsedData);
+              console.log('Parsed upload response:', parsedData);
               resolve({ data: parsedData });
             } catch (parseError) {
-              console.error('Error parsing response:', parseError);
-              reject(new Error(`Failed to parse response: ${parseError.message}`));
+              reject(new Error(`Failed to parse upload response: ${parseError.message}`));
             }
           } else {
-            console.error('Google Drive API error response:', data);
-            reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+            reject(new Error(`Upload failed: ${res.statusCode} - ${data}`));
           }
         });
       });
 
-      req.on('error', (error) => {
-        reject(error);
-      });
-
-      req.write(multipartBody);
-      req.end();
+      uploadReq.on('error', reject);
+      uploadReq.write(fileBuffer);
+      uploadReq.end();
     });
+
+    const file = uploadResponse;
 
     const file = response;
 
