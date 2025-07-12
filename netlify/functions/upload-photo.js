@@ -191,8 +191,23 @@ exports.handler = async (event, context) => {
     console.log('File buffer size:', fileBuffer.length);
 
     console.log('Starting Google Drive upload...');
+    
+    // Use a different approach - create file with metadata first, then update content
     const file = await drive.files.create({
-      resource: fileMetadata,
+      resource: {
+        name: fileMetadata.name,
+        parents: fileMetadata.parents,
+        supportsAllDrives: true,
+      },
+      fields: 'id',
+      supportsAllDrives: true,
+    });
+    
+    console.log('File created with ID:', file.data.id);
+    
+    // Now update the file with the actual content
+    await drive.files.update({
+      fileId: file.data.id,
       media: {
         mimeType: photoFile.contentType,
         body: fileBuffer,
@@ -200,7 +215,8 @@ exports.handler = async (event, context) => {
       fields: 'id,webViewLink',
       supportsAllDrives: true,
     });
-    console.log('Google Drive upload successful, file ID:', file.data.id);
+    
+    console.log('File content updated successfully');
 
     // Generate public URL
     const fileId = file.data.id;
