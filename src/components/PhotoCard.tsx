@@ -54,6 +54,12 @@ const PhotoCard = ({
             alt={`Bird photo taken at ${location}`}
             className="w-full h-64 object-cover cursor-pointer"
             onClick={() => setShowFullImage(true)}
+            onLoad={() => console.log('Image loaded successfully:', url)}
+            onError={(e) => {
+              console.error('Image failed to load:', url);
+              console.error('Error details:', e);
+              console.error('Image element:', e.target);
+            }}
           />
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
             <button
@@ -101,6 +107,12 @@ const PhotoCard = ({
               alt={`Bird photo taken at ${location}`}
               className="max-w-full max-h-full object-contain"
               onClick={(e) => e.stopPropagation()}
+              onLoad={() => console.log('Full image loaded successfully:', url)}
+              onError={(e) => {
+                console.error('Full image failed to load:', url);
+                console.error('Full image error details:', e);
+                console.error('Full image element:', e.target);
+              }}
             />
             <button
               onClick={() => setShowFullImage(false)}

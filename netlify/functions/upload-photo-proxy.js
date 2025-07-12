@@ -211,13 +211,13 @@ exports.handler = async (event, context) => {
 
     const file = uploadResponse;
 
-    const file = response;
-
     console.log('Google Drive upload successful, file ID:', file.data.id);
 
     // Generate public URL
     const fileId = file.data.id;
     const publicUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    console.log('Generated public URL:', publicUrl);
+    console.log('File ID:', fileId);
 
     // Save to Firestore
     const photoRef = await db.collection('birds').doc(birdId).collection('photos').add({
