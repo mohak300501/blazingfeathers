@@ -18,21 +18,14 @@ async function initializeDependencies() {
 }
 
 exports.handler = async (event, context) => {
-  console.log('Serve-image function called with event:', {
-    httpMethod: event.httpMethod,
-    queryStringParameters: event.queryStringParameters,
-    headers: event.headers
-  });
-
   // Enable CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    console.log('Handling OPTIONS request');
     return {
       statusCode: 200,
       headers,
@@ -40,37 +33,16 @@ exports.handler = async (event, context) => {
     };
   }
 
-  if (event.httpMethod !== 'GET') {
-    console.log('Invalid HTTP method:', event.httpMethod);
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-  }
-
   try {
     // Initialize dependencies
-    console.log('Initializing dependencies...');
     await initializeDependencies();
-    console.log('Dependencies initialized successfully');
     
-    // Extract file ID from query parameters
-    const { fileId } = event.queryStringParameters || {};
+    // Test with a specific file ID from the logs
+    const testFileId = '1grSHPIAKc7QzSJUn9ZhTPDPz8ollsiF9';
     
-    if (!fileId) {
-      console.log('No fileId provided in query parameters');
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'File ID is required' }),
-      };
-    }
-
-    console.log('Serving image for file ID:', fileId);
+    console.log('Testing serve-image functionality with file ID:', testFileId);
 
     // Get access token for Google Drive API
-    console.log('Getting Google Drive access token...');
     const google = require('googleapis');
     const { google: googleApi } = google;
     
@@ -84,34 +56,29 @@ exports.handler = async (event, context) => {
     
     const authClient = await auth.getClient();
     const accessToken = await authClient.getAccessToken();
-    console.log('Got access token successfully');
+
+    console.log('Got access token:', accessToken.token ? 'SUCCESS' : 'FAILED');
 
     // Use https module to fetch the file directly with service account credentials
     const https = require('https');
     
-    console.log('Making request to Google Drive API...');
     const response = await new Promise((resolve, reject) => {
       const options = {
         hostname: 'www.googleapis.com',
-        path: `/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
+        path: `/drive/v3/files/${testFileId}?alt=media&supportsAllDrives=true`,
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken.token}`,
         }
       };
 
-      console.log('Request options:', {
-        hostname: options.hostname,
-        path: options.path,
-        method: options.method
-      });
+      console.log('Making request to:', options.hostname + options.path);
 
       const req = https.request(options, (res) => {
         console.log('Google Drive file response status:', res.statusCode);
         console.log('Google Drive file response headers:', res.headers);
         
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          console.log('Google Drive API request successful, reading file data...');
           const chunks = [];
           res.on('data', (chunk) => {
             chunks.push(chunk);
@@ -120,8 +87,6 @@ exports.handler = async (event, context) => {
             const fileBuffer = Buffer.concat(chunks);
             console.log('File size received:', fileBuffer.length);
             console.log('File first 20 bytes:', fileBuffer.subarray(0, 20));
-            console.log('File buffer type:', typeof fileBuffer);
-            console.log('File buffer is Buffer:', Buffer.isBuffer(fileBuffer));
             
             resolve({
               statusCode: res.statusCode,
@@ -130,7 +95,6 @@ exports.handler = async (event, context) => {
             });
           });
         } else {
-          console.log('Google Drive API request failed with status:', res.statusCode);
           let errorData = '';
           res.on('data', (chunk) => errorData += chunk);
           res.on('end', () => {
@@ -148,44 +112,33 @@ exports.handler = async (event, context) => {
       req.end();
     });
 
-    // Set appropriate headers for image serving
-    const imageHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Content-Type': response.contentType,
-      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
-      'Content-Length': response.body.length.toString(),
-    };
+    console.log('Successfully retrieved file with size:', response.body.length);
+    console.log('Content type:', response.contentType);
 
-    console.log('Returning image with headers:', imageHeaders);
-    console.log('Image size:', response.body.length);
-    console.log('Image content type:', response.contentType);
-    console.log('Response body type:', typeof response.body);
-    console.log('Response body is Buffer:', Buffer.isBuffer(response.body));
-
-    // Try using Buffer with proper encoding
-    const imageBuffer = Buffer.from(response.body);
-    console.log('Image buffer size:', imageBuffer.length);
-    console.log('Image buffer first 20 bytes:', imageBuffer.subarray(0, 20));
-    
-    const base64Data = imageBuffer.toString('base64');
-    console.log('Base64 data length:', base64Data.length);
-    console.log('Base64 data preview:', base64Data.substring(0, 100));
-    
     return {
       statusCode: 200,
-      headers: imageHeaders,
-      body: base64Data,
-      isBase64Encoded: true,
+      headers,
+      body: JSON.stringify({
+        success: true,
+        message: 'Serve-image test successful',
+        fileId: testFileId,
+        fileSize: response.body.length,
+        contentType: response.contentType,
+        firstBytes: response.body.subarray(0, 20).toString('hex'),
+        timestamp: new Date().toISOString()
+      }),
     };
 
   } catch (error) {
-    console.error('Error serving image:', error);
+    console.error('Serve-image test failed:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ error: 'Internal server error', details: error.message }),
+      body: JSON.stringify({ 
+        error: 'Serve-image test failed', 
+        details: error.message,
+        stack: error.stack
+      }),
     };
   }
 }; 
