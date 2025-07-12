@@ -24,6 +24,7 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [cleaning, setCleaning] = useState(false)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -128,6 +129,42 @@ const AdminPanel = () => {
     } catch (error) {
       console.error('Error deleting bird:', error)
       toast.error('Failed to delete bird')
+    }
+  }
+
+  const handleCleanupFileIds = async () => {
+    if (!confirm('This will clean up any corrupted file IDs in the database. Continue?')) {
+      return
+    }
+
+    setCleaning(true)
+    try {
+      const response = await fetch('/.netlify/functions/fix-file-ids', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user?.uid
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to cleanup file IDs')
+      }
+
+      const result = await response.json()
+      toast.success(`File ID cleanup completed! Fixed ${result.fixedPhotos} out of ${result.totalPhotos} photos.`)
+      
+      if (result.errors && result.errors.length > 0) {
+        console.warn('Some errors occurred during cleanup:', result.errors)
+      }
+    } catch (error) {
+      console.error('Error cleaning up file IDs:', error)
+      toast.error(error.message || 'Failed to cleanup file IDs')
+    } finally {
+      setCleaning(false)
     }
   }
 
@@ -245,6 +282,41 @@ const AdminPanel = () => {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Database Maintenance */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Database Maintenance</h2>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div>
+              <h3 className="text-lg font-medium text-yellow-800">Fix File IDs</h3>
+              <p className="text-yellow-700 text-sm">
+                Clean up any corrupted file IDs in the database that might cause deletion errors.
+              </p>
+            </div>
+            <button
+              onClick={handleCleanupFileIds}
+              disabled={cleaning}
+              className="btn-secondary flex items-center space-x-2"
+            >
+              {cleaning ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                  <span>Cleaning...</span>
+                </>
+              ) : (
+                <>
+                  <Settings className="h-4 w-4" />
+                  <span>Clean Up</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Add Bird Modal */}

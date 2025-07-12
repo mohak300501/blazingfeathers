@@ -83,6 +83,12 @@ exports.handler = async (event, context) => {
     }
 
     const photoData = photoDoc.data();
+    console.log('Photo data:', {
+      photoId,
+      driveFileId: photoData.driveFileId,
+      url: photoData.url,
+      uploadedBy: photoData.uploadedBy
+    });
 
     // Check permissions (only admin or photo owner can delete)
     const userDoc = await db.collection('users').doc(userId).get();
@@ -109,7 +115,11 @@ exports.handler = async (event, context) => {
     // Delete from Google Drive
     if (photoData.driveFileId) {
       try {
-        console.log('Deleting file from Google Drive:', photoData.driveFileId);
+        // Clean the file ID - remove any trailing characters that might have been added
+        const cleanFileId = photoData.driveFileId.trim().replace(/[^a-zA-Z0-9_-]/g, '');
+        console.log('Original file ID:', photoData.driveFileId);
+        console.log('Cleaned file ID:', cleanFileId);
+        console.log('Deleting file from Google Drive:', cleanFileId);
         
         // Get access token using the same auth setup as other functions
         const { google: googleApi } = require('googleapis');
@@ -131,7 +141,7 @@ exports.handler = async (event, context) => {
         const deleteResponse = await new Promise((resolve, reject) => {
           const options = {
             hostname: 'www.googleapis.com',
-            path: `/drive/v3/files/${photoData.driveFileId}?supportsAllDrives=true`,
+            path: `/drive/v3/files/${cleanFileId}?supportsAllDrives=true`,
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${accessToken.token}`,
@@ -144,6 +154,9 @@ exports.handler = async (event, context) => {
             if (res.statusCode >= 200 && res.statusCode < 300) {
               console.log('File deleted successfully from Google Drive');
               resolve();
+            } else if (res.statusCode === 404) {
+              console.log('File not found in Google Drive (may have been deleted already)');
+              resolve(); // Don't treat 404 as an error, just log it
             } else {
               let errorData = '';
               res.on('data', (chunk) => errorData += chunk);
