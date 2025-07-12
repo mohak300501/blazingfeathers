@@ -107,17 +107,27 @@ exports.handler = async (event, context) => {
                 const contentTypeMatch = lines.find(line => line.startsWith('Content-Type:'));
                 const contentType = contentTypeMatch ? contentTypeMatch.split(': ')[1] : 'image/jpeg';
                 
-                // The value should already be the raw file data (not base64)
-                // We need to convert it to base64 for storage
-                const base64Data = Buffer.from(value, 'binary').toString('base64');
+                // The value contains the raw binary file data
+                // We need to handle this correctly for base64 encoding
+                const rawData = value;
+                
+                // Convert binary data to base64 properly
+                const base64Data = Buffer.from(rawData, 'binary').toString('base64');
+                
+                // Verify we have actual data
+                if (base64Data.length < 100) {
+                  console.error('File data too small, likely corrupted:', base64Data.length);
+                  throw new Error('File data appears to be corrupted or empty');
+                }
                 
                 photoFile = {
                   data: base64Data,
                   contentType: contentType,
                   name: `bird_${Date.now()}.jpg`
                 };
-                console.log('Photo file found, raw size:', value.length, 'base64 size:', base64Data.length);
+                console.log('Photo file found, raw size:', rawData.length, 'base64 size:', base64Data.length);
                 console.log('Base64 data preview:', base64Data.substring(0, 100));
+                console.log('Content type:', contentType);
               } else if (name === 'birdId') {
                 birdId = value;
                 console.log('BirdId:', birdId);

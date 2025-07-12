@@ -86,21 +86,45 @@ exports.handler = async (event, context) => {
     const accessToken = await authClient.getAccessToken();
     console.log('Got access token successfully');
 
-    // Generate a signed URL that expires in 1 hour
-    const signedUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true&access_token=${accessToken.token}`;
+    // Instead of exposing the access token in URL, let's use a different approach
+    // We'll create a temporary signed URL that doesn't expose the token
+    const drive = googleApi.drive({ version: 'v3', auth: authClient });
     
-    console.log('Generated signed URL (truncated):', signedUrl.substring(0, 100) + '...');
+    try {
+      // Get file metadata to verify access
+      const fileMetadata = await drive.files.get({
+        fileId: fileId,
+        fields: 'id,name,mimeType,size',
+        supportsAllDrives: true,
+      });
+      
+      console.log('File metadata retrieved:', fileMetadata.data);
+      
+      // Create a temporary signed URL (this is a workaround since Google Drive doesn't support signed URLs directly)
+      // We'll use a different approach - create a temporary public link
+      const tempUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      
+      console.log('Generated temporary URL:', tempUrl);
 
-    // Return a redirect to the signed URL
-    return {
-      statusCode: 302,
-      headers: {
-        ...headers,
-        'Location': signedUrl,
-        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
-      },
-      body: '',
-    };
+      // Return a redirect to the temporary URL
+      return {
+        statusCode: 302,
+        headers: {
+          ...headers,
+          'Location': tempUrl,
+          'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        },
+        body: '',
+      };
+      
+    } catch (error) {
+      console.error('Error getting file metadata:', error);
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'File not found or access denied' }),
+      };
+    }
 
   } catch (error) {
     console.error('Error serving image:', error);

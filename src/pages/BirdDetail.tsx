@@ -119,17 +119,48 @@ const BirdDetail = () => {
 
     setUploading(true)
     try {
-      formData.append('birdId', id)
-      formData.append('userId', user.uid)
-      formData.append('userEmail', user.email || '')
+      // Extract data from FormData
+      const file = formData.get('photo') as File
+      const location = formData.get('location') as string
+      const dateOfCapture = formData.get('dateOfCapture') as string
 
-      const response = await fetch('/.netlify/functions/upload-photo', {
+      if (!file || !location || !dateOfCapture) {
+        throw new Error('Missing required fields')
+      }
+
+      // Convert file to base64
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+          const base64 = result.split(',')[1]
+          resolve(base64)
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+      })
+
+      // Send JSON data to the new upload function
+      const response = await fetch('/.netlify/functions/upload-photo-simple', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileData: base64Data,
+          fileName: file.name,
+          contentType: file.type,
+          birdId: id,
+          userId: user.uid,
+          location: location,
+          dateOfCapture: dateOfCapture,
+        }),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to upload photo')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to upload photo')
       }
 
       const result = await response.json()
