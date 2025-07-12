@@ -178,16 +178,58 @@ exports.handler = async (event, context) => {
         
         console.log('Successfully accessed file info, proceeding with deletion...');
         
-        // Use direct HTTPS with shared drive parameters (same approach as upload)
-        console.log('Using direct HTTPS delete with shared drive support...');
+        // First, add the service account as owner of the file
+        console.log('Adding service account as owner...');
         
-        const deletePath = `/drive/v3/files/${fileId}?supportsAllDrives=true`;
-        console.log('Delete path:', deletePath);
+        const permissionResponse = await new Promise((resolve, reject) => {
+          const permissionOptions = {
+            hostname: 'www.googleapis.com',
+            path: `/drive/v3/files/${fileId}/permissions?supportsAllDrives=true`,
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken.token}`,
+              'Content-Type': 'application/json',
+            }
+          };
+
+          const permissionData = {
+            role: 'owner',
+            type: 'user',
+            emailAddress: process.env.FIREBASE_CLIENT_EMAIL
+          };
+
+          const req = https.request(permissionOptions, (res) => {
+            console.log('Permission response status:', res.statusCode);
+            
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+              if (res.statusCode >= 200 && res.statusCode < 300) {
+                console.log('Service account added as owner');
+                resolve();
+              } else {
+                console.log('Permission setting failed (continuing anyway):', res.statusCode, data);
+                resolve(); // Continue even if permission setting fails
+              }
+            });
+          });
+
+          req.on('error', (error) => {
+            console.error('Permission request error:', error);
+            resolve(); // Continue even if permission setting fails
+          });
+
+          req.write(JSON.stringify(permissionData));
+          req.end();
+        });
+        
+        // Now delete the file
+        console.log('Deleting file...');
         
         const deleteResponse = await new Promise((resolve, reject) => {
           const options = {
             hostname: 'www.googleapis.com',
-            path: deletePath,
+            path: `/drive/v3/files/${fileId}?supportsAllDrives=true`,
             method: 'DELETE',
             headers: {
               'Authorization': `Bearer ${accessToken.token}`,
@@ -202,7 +244,7 @@ exports.handler = async (event, context) => {
               resolve();
             } else if (res.statusCode === 404) {
               console.log('File not found (may have been deleted already)');
-              resolve(); // Don't treat 404 as error
+              resolve();
             } else {
               let errorData = '';
               res.on('data', (chunk) => errorData += chunk);
