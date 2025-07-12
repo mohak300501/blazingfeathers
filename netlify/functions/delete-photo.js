@@ -240,6 +240,9 @@ exports.handler = async (event, context) => {
             // Continue with Firestore deletion even if Drive deletion fails
           }
         }
+      } catch (driveError) {
+        console.error('Error deleting from Drive:', driveError);
+        // Continue with Firestore deletion even if Drive deletion fails
       }
     }
 
