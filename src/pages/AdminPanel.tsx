@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore'
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { Bird, Plus, Trash2, Settings, Users, Camera, Database } from 'lucide-react'
+import { Bird, Plus, Trash2, Settings, Users, Camera } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Bird {
@@ -78,19 +78,31 @@ const AdminPanel = () => {
   const handleAddBird = async (commonName: string, scientificName: string) => {
     setAdding(true)
     try {
-      await addDoc(collection(db, 'birds'), {
-        commonName,
-        scientificName,
-        photoCount: 0,
-        createdAt: new Date()
+      // Call Netlify function to add bird
+      const response = await fetch('/.netlify/functions/add-bird', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          commonName,
+          scientificName,
+          userId: user?.uid
+        }),
       })
-      
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add bird')
+      }
+
+      const result = await response.json()
       toast.success('Bird added successfully!')
       setShowAddModal(false)
       fetchData() // Refresh data
     } catch (error) {
       console.error('Error adding bird:', error)
-      toast.error('Failed to add bird')
+      toast.error(error.message || 'Failed to add bird')
     } finally {
       setAdding(false)
     }
