@@ -229,7 +229,7 @@ exports.handler = async (event, context) => {
         };
 
         const permissionData = {
-          role: 'fileOrganizer',
+          role: 'writer',
           type: 'user',
           emailAddress: process.env.FIREBASE_CLIENT_EMAIL
         };
