@@ -67,7 +67,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    console.log('Serving image for file ID:', fileId);
+    console.log('Generating signed URL for file ID:', fileId);
 
     // Get access token for Google Drive API
     console.log('Getting Google Drive access token...');
@@ -86,98 +86,20 @@ exports.handler = async (event, context) => {
     const accessToken = await authClient.getAccessToken();
     console.log('Got access token successfully');
 
-    // Use https module to fetch the file directly with service account credentials
-    const https = require('https');
+    // Generate a signed URL that expires in 1 hour
+    const signedUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true&access_token=${accessToken.token}`;
     
-    console.log('Making request to Google Drive API...');
-    const response = await new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'www.googleapis.com',
-        path: `/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`,
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${accessToken.token}`,
-        }
-      };
+    console.log('Generated signed URL (truncated):', signedUrl.substring(0, 100) + '...');
 
-      console.log('Request options:', {
-        hostname: options.hostname,
-        path: options.path,
-        method: options.method
-      });
-
-      const req = https.request(options, (res) => {
-        console.log('Google Drive file response status:', res.statusCode);
-        console.log('Google Drive file response headers:', res.headers);
-        
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          console.log('Google Drive API request successful, reading file data...');
-          const chunks = [];
-          res.on('data', (chunk) => {
-            chunks.push(chunk);
-          });
-          res.on('end', () => {
-            const fileBuffer = Buffer.concat(chunks);
-            console.log('File size received:', fileBuffer.length);
-            console.log('File first 20 bytes:', fileBuffer.subarray(0, 20));
-            console.log('File buffer type:', typeof fileBuffer);
-            console.log('File buffer is Buffer:', Buffer.isBuffer(fileBuffer));
-            
-            resolve({
-              statusCode: res.statusCode,
-              contentType: res.headers['content-type'] || 'image/jpeg',
-              body: fileBuffer
-            });
-          });
-        } else {
-          console.log('Google Drive API request failed with status:', res.statusCode);
-          let errorData = '';
-          res.on('data', (chunk) => errorData += chunk);
-          res.on('end', () => {
-            console.error('Google Drive API error:', res.statusCode, errorData);
-            reject(new Error(`Google Drive API error: ${res.statusCode} - ${errorData}`));
-          });
-        }
-      });
-
-      req.on('error', (error) => {
-        console.error('Request error:', error);
-        reject(error);
-      });
-
-      req.end();
-    });
-
-    // Set appropriate headers for image serving
-    const imageHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Content-Type': response.contentType,
-      'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
-      'Content-Length': response.body.length.toString(),
-    };
-
-    console.log('Returning image with headers:', imageHeaders);
-    console.log('Image size:', response.body.length);
-    console.log('Image content type:', response.contentType);
-    console.log('Response body type:', typeof response.body);
-    console.log('Response body is Buffer:', Buffer.isBuffer(response.body));
-
-    // Try using Buffer with proper encoding
-    const imageBuffer = Buffer.from(response.body);
-    console.log('Image buffer size:', imageBuffer.length);
-    console.log('Image buffer first 20 bytes:', imageBuffer.subarray(0, 20));
-    
-    const base64Data = imageBuffer.toString('base64');
-    console.log('Base64 data length:', base64Data.length);
-    console.log('Base64 data preview:', base64Data.substring(0, 100));
-    
+    // Return a redirect to the signed URL
     return {
-      statusCode: 200,
-      headers: imageHeaders,
-      body: base64Data,
-      isBase64Encoded: true,
+      statusCode: 302,
+      headers: {
+        ...headers,
+        'Location': signedUrl,
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+      },
+      body: '',
     };
 
   } catch (error) {
