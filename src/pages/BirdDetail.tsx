@@ -38,10 +38,10 @@ const BirdDetail = () => {
       if (!commonCode) return
 
       try {
-        console.log('Looking for bird with commonCode:', commonCode.toUpperCase())
+        console.log('Looking for bird with commonCode:', commonCode)
         
         // First try to find by commonCode
-        let birdsQuery = query(collection(db, 'birds'), where('commonCode', '==', commonCode.toUpperCase()))
+        let birdsQuery = query(collection(db, 'birds'), where('commonCode', '==', commonCode))
         let birdsSnapshot = await getDocs(birdsQuery)
         
         console.log('Query result - empty:', birdsSnapshot.empty, 'size:', birdsSnapshot.size)
