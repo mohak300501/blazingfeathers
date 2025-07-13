@@ -184,7 +184,7 @@ exports.handler = async (event, context) => {
         const permissionResponse = await new Promise((resolve, reject) => {
           const permissionOptions = {
             hostname: 'www.googleapis.com',
-            path: `/drive/v3/files/${fileId}/permissions?supportsAllDrives=true`,
+            path: `/drive/v3/files/${fileId}/permissions?supportsAllDrives=true&transferOwnership=true`,
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${accessToken.token}`,
