@@ -38,7 +38,7 @@ const BirdDetail = () => {
       if (!commonCode) return
 
       try {
-        // Fetch bird data by commonCode
+        // Fetch bird data by commonCode (convert to uppercase for database query)
         const birdsQuery = query(collection(db, 'birds'), where('commonCode', '==', commonCode.toUpperCase()))
         const birdsSnapshot = await getDocs(birdsQuery)
         

@@ -25,7 +25,6 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [adding, setAdding] = useState(false)
-  const [migrating, setMigrating] = useState(false)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -133,38 +132,7 @@ const AdminPanel = () => {
     }
   }
 
-  const handleMigrateCommonCodes = async () => {
-    if (!confirm('This will add commonCode to all birds that don\'t have one. Continue?')) {
-      return
-    }
 
-    setMigrating(true)
-    try {
-      const response = await fetch('/.netlify/functions/migrateCommonCodes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user?.uid
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to migrate commonCodes')
-      }
-
-      const result = await response.json()
-      toast.success(result.message || 'Migration completed successfully!')
-      fetchData() // Refresh data
-    } catch (error) {
-      console.error('Error migrating commonCodes:', error)
-      toast.error(error.message || 'Failed to migrate commonCodes')
-    } finally {
-      setMigrating(false)
-    }
-  }
 
   if (!isAdmin) {
     return (
@@ -219,31 +187,13 @@ const AdminPanel = () => {
       <div className="card">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Birds Management</h2>
-          <div className="flex space-x-3">
-            <button
-              onClick={handleMigrateCommonCodes}
-              disabled={migrating}
-              className="btn-secondary flex items-center space-x-2"
-            >
-              {migrating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-                  <span>Migrating...</span>
-                </>
-              ) : (
-                <>
-                  <span>Migrate CommonCodes</span>
-                </>
-              )}
-            </button>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="btn-primary flex items-center space-x-2"
-            >
-              <Plus className="h-5 w-5" />
-              <span>Add Bird</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn-primary flex items-center space-x-2"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Add Bird</span>
+          </button>
         </div>
 
         {birds.length === 0 ? (

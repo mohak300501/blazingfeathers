@@ -92,6 +92,7 @@ exports.handler = async (event, context) => {
         id: doc.id,
         commonName: data.commonName,
         scientificName: data.scientificName,
+        commonCode: data.commonCode || '',
         photoCount: data.photoCount || 0
       });
       totalPhotos += data.photoCount || 0;
