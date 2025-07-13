@@ -178,52 +178,7 @@ exports.handler = async (event, context) => {
         
         console.log('Successfully accessed file info, proceeding with deletion...');
         
-        // First, add the service account as owner of the file
-        console.log('Adding service account as owner...');
-        
-        const permissionResponse = await new Promise((resolve, reject) => {
-          const permissionOptions = {
-            hostname: 'www.googleapis.com',
-            path: `/drive/v3/files/${fileId}/permissions?supportsAllDrives=true&transferOwnership=true`,
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken.token}`,
-              'Content-Type': 'application/json',
-            }
-          };
-
-          const permissionData = {
-            role: 'owner',
-            type: 'user',
-            emailAddress: process.env.FIREBASE_CLIENT_EMAIL
-          };
-
-          const req = https.request(permissionOptions, (res) => {
-            console.log('Permission response status:', res.statusCode);
-            
-            let data = '';
-            res.on('data', (chunk) => data += chunk);
-            res.on('end', () => {
-              if (res.statusCode >= 200 && res.statusCode < 300) {
-                console.log('Service account added as owner');
-                resolve();
-              } else {
-                console.log('Permission setting failed (continuing anyway):', res.statusCode, data);
-                resolve(); // Continue even if permission setting fails
-              }
-            });
-          });
-
-          req.on('error', (error) => {
-            console.error('Permission request error:', error);
-            resolve(); // Continue even if permission setting fails
-          });
-
-          req.write(JSON.stringify(permissionData));
-          req.end();
-        });
-        
-        // Now delete the file
+        // Delete the file
         console.log('Deleting file...');
         
         const deleteResponse = await new Promise((resolve, reject) => {
