@@ -28,14 +28,16 @@ const Home = () => {
         const birdsData: Bird[] = []
         querySnapshot.forEach((doc) => {
           const data = doc.data()
-          birdsData.push({
+          const birdData = {
             id: doc.id,
             commonName: data.commonName,
             scientificName: data.scientificName,
             photoCount: data.photoCount || 0,
             featuredPhoto: data.featuredPhoto,
             commonCode: data.commonCode || ''
-          })
+          }
+          console.log(`Fetched bird: ${birdData.commonName} -> commonCode: "${birdData.commonCode}"`)
+          birdsData.push(birdData)
         })
         
         setBirds(birdsData)

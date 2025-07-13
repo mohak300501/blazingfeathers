@@ -11,10 +11,10 @@ export function generateCommonCode(commonName: string): string {
     // 2 words: first 2 letters each
     code = words[0].substring(0, 2) + words[1].substring(0, 2);
   } else if (words.length === 3) {
-    // 3 words: 1 letter each of first word and 2 letters of third word
-    code = words[0].substring(0, 1) + words[2].substring(0, 2);
+    // 3 words: first 1 letter each of first word and first 2 letters of third word
+    code = words[0].substring(0, 1) + words[1].substring(0, 1) + words[2].substring(0, 2);
   } else {
-    // 4 words or more: 1 letter each of first 4 words
+    // 4 words or more: first 1 letter each of first 4 words
     code = words.slice(0, 4).map(word => word.substring(0, 1)).join('');
   }
   

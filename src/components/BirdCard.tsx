@@ -11,8 +11,9 @@ interface BirdCardProps {
 }
 
 const BirdCard = ({ id, commonName, scientificName, photoCount, featuredPhoto, commonCode }: BirdCardProps) => {
+  console.log(`BirdCard for ${commonName}: commonCode = "${commonCode}", URL = "/bird/${commonCode.toLowerCase()}"`)
   return (
-    <Link to={`/bird/${commonCode.toLowerCase()}`}>
+    <Link to={commonCode ? `/bird/${commonCode.toLowerCase()}` : `/bird/${id}`}>
       <div className="bird-card group">
         <div className="relative h-48 bg-gray-200 overflow-hidden">
           {featuredPhoto ? (

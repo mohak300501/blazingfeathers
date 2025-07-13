@@ -38,11 +38,63 @@ const BirdDetail = () => {
       if (!commonCode) return
 
       try {
-        // Fetch bird data by commonCode (convert to uppercase for database query)
-        const birdsQuery = query(collection(db, 'birds'), where('commonCode', '==', commonCode.toUpperCase()))
-        const birdsSnapshot = await getDocs(birdsQuery)
+        console.log('Looking for bird with commonCode:', commonCode.toUpperCase())
         
+        // First try to find by commonCode
+        let birdsQuery = query(collection(db, 'birds'), where('commonCode', '==', commonCode.toUpperCase()))
+        let birdsSnapshot = await getDocs(birdsQuery)
+        
+        console.log('Query result - empty:', birdsSnapshot.empty, 'size:', birdsSnapshot.size)
+        
+        // If not found by commonCode, try by ID (for backward compatibility)
         if (birdsSnapshot.empty) {
+          console.log('Not found by commonCode, trying by ID...')
+          try {
+            const birdDoc = await getDoc(doc(db, 'birds', commonCode))
+            if (birdDoc.exists()) {
+              console.log('Found by ID')
+              const birdData = birdDoc.data()
+              setBird({
+                id: birdDoc.id,
+                commonName: birdData.commonName,
+                scientificName: birdData.scientificName,
+                photoCount: birdData.photoCount || 0
+              })
+              
+              // Fetch photos
+              const photosQuery = query(collection(db, 'birds', birdDoc.id, 'photos'), orderBy('dateOfCapture', 'desc'))
+              const photosSnapshot = await getDocs(photosQuery)
+              
+              const photosData: Photo[] = []
+              photosSnapshot.forEach((doc) => {
+                const data = doc.data()
+                photosData.push({
+                  id: doc.id,
+                  url: data.url,
+                  location: data.location,
+                  dateOfCapture: data.dateOfCapture.toDate(),
+                  uploadedBy: data.uploadedBy,
+                  uploadedByUsername: data.uploadedByUsername
+                })
+              })
+              
+              setPhotos(photosData)
+              setLoading(false)
+              return
+            }
+          } catch (error) {
+            console.log('Error trying to find by ID:', error)
+          }
+          
+          // Let's try to get all birds to see what's in the database
+          const allBirdsQuery = query(collection(db, 'birds'))
+          const allBirdsSnapshot = await getDocs(allBirdsQuery)
+          console.log('All birds in database:')
+          allBirdsSnapshot.forEach(doc => {
+            const data = doc.data()
+            console.log(`- ${data.commonName}: commonCode = "${data.commonCode}"`)
+          })
+          
           toast.error('Bird not found')
           return
         }
