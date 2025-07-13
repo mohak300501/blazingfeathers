@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import { useAuth } from './contexts/AuthContext'
 import Navbar from './components/Navbar'
+import Footer from './components/Footer'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -16,9 +17,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 flex-1">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/bird/:commonCode" element={<BirdDetail />} />
@@ -33,6 +34,7 @@ function App() {
           )}
         </Routes>
       </main>
+      <Footer />
     </div>
   )
 }

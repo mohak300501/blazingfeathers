@@ -68,7 +68,7 @@ const Home = () => {
           Blazing Feathers
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Discover the beauty of birds through stunning photography from around the world
+          Discover the beauty of birds through stunning photography from around Roorkee, India
         </p>
       </div>
 
