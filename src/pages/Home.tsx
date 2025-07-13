@@ -36,7 +36,6 @@ const Home = () => {
             featuredPhoto: data.featuredPhoto,
             commonCode: data.commonCode || ''
           }
-          console.log(`Fetched bird: ${birdData.commonName} -> commonCode: "${birdData.commonCode}"`)
           birdsData.push(birdData)
         })
         
