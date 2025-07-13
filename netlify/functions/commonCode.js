@@ -1,4 +1,4 @@
-export function generateCommonCode(commonName: string): string {
+function generateCommonCode(commonName) {
   // Split the common name on spaces and hyphens
   const words = commonName.split(/[\s-]+/).filter(word => word.length > 0);
   
@@ -28,7 +28,7 @@ export function generateCommonCode(commonName: string): string {
   return code;
 }
 
-export function generateUniqueCommonCode(commonName: string, existingCodes: string[]): string {
+function generateUniqueCommonCode(commonName, existingCodes) {
   const baseCode = generateCommonCode(commonName);
   
   // Start with digit 0
@@ -47,4 +47,9 @@ export function generateUniqueCommonCode(commonName: string, existingCodes: stri
   }
   
   return fullCode;
-} 
+}
+
+module.exports = {
+  generateCommonCode,
+  generateUniqueCommonCode
+}; 

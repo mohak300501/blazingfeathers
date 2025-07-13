@@ -20,7 +20,7 @@ async function initializeDependencies() {
 }
 
 // Import commonCode generator
-const { generateUniqueCommonCode } = require('./commonCodeGenerator');
+const { generateUniqueCommonCode } = require('./commonCode');
 
 exports.handler = async (event, context) => {
   // Enable CORS

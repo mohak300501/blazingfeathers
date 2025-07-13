@@ -38,7 +38,7 @@ const AdminPanel = () => {
   const fetchData = async () => {
     try {
       // Call Netlify function to fetch admin data
-      const response = await fetch('/.netlify/functions/getAdminStats', {
+      const response = await fetch('/.netlify/functions/adminStats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
