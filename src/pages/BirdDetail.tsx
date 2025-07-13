@@ -85,7 +85,7 @@ const BirdDetail = () => {
   const handlePhotoDelete = async (photoId: string) => {
     try {
       // Call Netlify function to delete photo
-      const response = await fetch('/.netlify/functions/delete-photo', {
+              const response = await fetch('/.netlify/functions/deletePhoto', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -142,7 +142,7 @@ const BirdDetail = () => {
       })
 
       // Send JSON data to the new upload function
-      const response = await fetch('/.netlify/functions/upload-photo-simple', {
+              const response = await fetch('/.netlify/functions/addPhoto', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

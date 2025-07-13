@@ -60,7 +60,7 @@ const Home = () => {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-6xl font-bold text-gradient">
+        <h1 className="text-4xl md:text-6xl font-bold text-gradient leading-tight">
           Blazing Feathers
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">

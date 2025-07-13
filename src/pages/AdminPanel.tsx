@@ -37,7 +37,7 @@ const AdminPanel = () => {
   const fetchData = async () => {
     try {
       // Call Netlify function to fetch admin data
-      const response = await fetch('/.netlify/functions/get-admin-stats', {
+      const response = await fetch('/.netlify/functions/getAdminStats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ const AdminPanel = () => {
     setAdding(true)
     try {
       // Call Netlify function to add bird
-      const response = await fetch('/.netlify/functions/add-bird', {
+      const response = await fetch('/.netlify/functions/addBird', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ const AdminPanel = () => {
 
     try {
       // Call Netlify function to delete bird and all its photos
-      const response = await fetch('/.netlify/functions/delete-bird', {
+      const response = await fetch('/.netlify/functions/deleteBird', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

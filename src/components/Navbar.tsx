@@ -1,10 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Bird, Home, LogIn, UserPlus, Settings, LogOut } from 'lucide-react'
+import { Bird, Home, LogIn, UserPlus, Settings, LogOut, Menu, X } from 'lucide-react'
+import { useState } from 'react'
 
 const Navbar = () => {
-  const { user, isAdmin, logout } = useAuth()
+  const { user, isAdmin, username, logout } = useAuth()
   const location = useLocation()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const handleLogout = async () => {
     try {
@@ -24,7 +26,7 @@ const Navbar = () => {
             <span className="text-xl font-bold text-gradient">Blazing Feathers</span>
           </Link>
 
-          {/* Navigation Links */}
+          {/* Desktop Navigation Links */}
           <div className="hidden md:flex items-center space-x-8">
             <Link 
               to="/" 
@@ -53,12 +55,12 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Auth Buttons */}
-          <div className="flex items-center space-x-4">
+          {/* Desktop Auth Buttons */}
+          <div className="hidden md:flex items-center space-x-4">
             {user ? (
               <div className="flex items-center space-x-4">
-                <div className="hidden md:block text-sm text-gray-600">
-                  Welcome, {user.email}
+                <div className="text-sm text-gray-600">
+                  Welcome, {username || user.email}
                 </div>
                 <button
                   onClick={handleLogout}
@@ -79,7 +81,7 @@ const Navbar = () => {
                 </Link>
                 <Link
                   to="/register"
-                  className="btn-primary text-sm"
+                  className="btn-primary text-sm flex items-center space-x-1"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Register</span>
@@ -87,7 +89,93 @@ const Navbar = () => {
               </div>
             )}
           </div>
+
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-600 hover:text-gray-900 focus:outline-none focus:text-gray-900"
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-gray-200">
+              <Link 
+                to="/" 
+                className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  location.pathname === '/' 
+                    ? 'text-primary-600 bg-primary-50' 
+                    : 'text-gray-600 hover:text-primary-600 hover:bg-gray-50'
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <Home className="h-4 w-4" />
+                <span>Home</span>
+              </Link>
+              
+              {user && isAdmin && (
+                <Link 
+                  to="/admin" 
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    location.pathname === '/admin' 
+                      ? 'text-primary-600 bg-primary-50' 
+                      : 'text-gray-600 hover:text-primary-600 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Admin</span>
+                </Link>
+              )}
+
+              {user ? (
+                <div className="px-3 py-2">
+                  <div className="text-sm text-gray-600 mb-2">
+                    Welcome, {username || user.email}
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleLogout()
+                      setIsMobileMenuOpen(false)
+                    }}
+                    className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Link
+                    to="/login"
+                    className="flex items-center space-x-1 px-3 py-2 text-sm font-medium text-gray-600 hover:text-primary-600 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <LogIn className="h-4 w-4" />
+                    <span>Login</span>
+                  </Link>
+                  <Link
+                    to="/register"
+                    className="btn-primary text-sm flex items-center space-x-1 mx-3"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>Register</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   )

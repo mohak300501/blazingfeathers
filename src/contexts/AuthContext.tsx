@@ -15,6 +15,7 @@ interface AuthContextType {
   user: User | null
   loading: boolean
   isAdmin: boolean
+  username: string | null
   login: (email: string, password: string) => Promise<void>
   register: (username: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -39,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [username, setUsername] = useState<string | null>(null)
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -48,8 +50,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if user is admin
         const isUserAdmin = ADMIN_EMAILS.includes(user.email || '')
         setIsAdmin(isUserAdmin)
+        
+        // Get username from Firestore
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid))
+          if (userDoc.exists()) {
+            setUsername(userDoc.data().username)
+          }
+        } catch (error) {
+          console.error('Error fetching username:', error)
+        }
       } else {
         setIsAdmin(false)
+        setUsername(null)
       }
       
       setLoading(false)
@@ -116,6 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     loading,
     isAdmin,
+    username,
     login,
     register,
     logout

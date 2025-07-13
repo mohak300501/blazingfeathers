@@ -148,7 +148,7 @@ blazingfeathers/
 │   ├── App.tsx             # Main app component
 │   └── main.tsx            # App entry point
 ├── netlify/
-│   └── functions/          # Serverless functions (add-bird, delete-bird, upload-photo, delete-photo)
+│   └── functions/          # Serverless functions (addBird, deleteBird, addPhoto, deletePhoto, servePhoto, getAdminStats)
 ├── public/                 # Static assets
 ├── package.json            # Dependencies
 ├── netlify.toml           # Netlify configuration

@@ -215,7 +215,7 @@ exports.handler = async (event, context) => {
 
     // Generate proxy URL
     const fileId = file.data.id;
-    const proxyUrl = `${process.env.URL}/.netlify/functions/serve-image?fileId=${fileId}`;
+    const proxyUrl = `${process.env.URL}/.netlify/functions/servePhoto?fileId=${fileId}`;
     console.log('Generated proxy URL:', proxyUrl);
 
     // Save to Firestore

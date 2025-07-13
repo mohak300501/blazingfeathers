@@ -18,7 +18,7 @@ async function initializeDependencies() {
 }
 
 exports.handler = async (event, context) => {
-  console.log('Serve-image function called with event:', {
+      console.log('ServePhoto function called with event:', {
     httpMethod: event.httpMethod,
     queryStringParameters: event.queryStringParameters,
     headers: event.headers
