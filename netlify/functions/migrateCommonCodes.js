@@ -50,9 +50,9 @@ exports.handler = async (event, context) => {
     // Initialize dependencies
     await initializeDependencies();
     
-    const { commonName, scientificName, userId } = JSON.parse(event.body);
+    const { userId } = JSON.parse(event.body);
 
-    if (!commonName || !scientificName || !userId) {
+    if (!userId) {
       return {
         statusCode: 400,
         headers,
@@ -82,57 +82,50 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Check if bird already exists (case-insensitive)
-    const birdsQuery = await db.collection('birds')
-      .where('commonName', '==', commonName)
-      .get();
-
-    if (!birdsQuery.empty) {
-      return {
-        statusCode: 409,
-        headers,
-        body: JSON.stringify({ error: 'Bird with this common name already exists' }),
-      };
-    }
-
-    // Get all existing commonCodes to ensure uniqueness
-    const allBirdsQuery = await db.collection('birds').get();
+    // Get all birds that don't have commonCode
+    const birdsQuery = await db.collection('birds').get();
+    const birdsToUpdate = [];
     const existingCodes = [];
-    allBirdsQuery.forEach(doc => {
+
+    // First pass: collect existing codes and identify birds that need updating
+    birdsQuery.forEach(doc => {
       const data = doc.data();
       if (data.commonCode) {
         existingCodes.push(data.commonCode);
+      } else {
+        birdsToUpdate.push({
+          id: doc.id,
+          commonName: data.commonName,
+          scientificName: data.scientificName
+        });
       }
     });
 
-    // Generate unique commonCode
-    const commonCode = generateUniqueCommonCode(commonName, existingCodes);
-
-    // Add bird to Firestore
-    const birdRef = await db.collection('birds').add({
-      commonName: commonName.trim(),
-      scientificName: scientificName.trim(),
-      commonCode: commonCode,
-      photoCount: 0,
-      createdAt: new Date(),
-      addedBy: userId,
-      addedByUsername: userData.username
+    // Second pass: generate unique codes for birds that need them
+    const updatePromises = birdsToUpdate.map(async (bird) => {
+      const commonCode = generateUniqueCommonCode(bird.commonName, existingCodes);
+      existingCodes.push(commonCode); // Add to existing codes for next iteration
+      
+      return db.collection('birds').doc(bird.id).update({
+        commonCode: commonCode
+      });
     });
+
+    // Execute all updates
+    await Promise.all(updatePromises);
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        birdId: birdRef.id,
-        commonName,
-        scientificName,
-        commonCode
+        updatedCount: birdsToUpdate.length,
+        message: `Successfully added commonCode to ${birdsToUpdate.length} birds`
       }),
     };
 
   } catch (error) {
-    console.error('Error adding bird:', error);
+    console.error('Error migrating commonCodes:', error);
     return {
       statusCode: 500,
       headers,

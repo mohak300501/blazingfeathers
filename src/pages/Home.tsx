@@ -11,6 +11,7 @@ interface Bird {
   scientificName: string
   photoCount: number
   featuredPhoto?: string
+  commonCode: string
 }
 
 const Home = () => {
@@ -32,7 +33,8 @@ const Home = () => {
             commonName: data.commonName,
             scientificName: data.scientificName,
             photoCount: data.photoCount || 0,
-            featuredPhoto: data.featuredPhoto
+            featuredPhoto: data.featuredPhoto,
+            commonCode: data.commonCode || ''
           })
         })
         
@@ -49,7 +51,8 @@ const Home = () => {
 
   const filteredBirds = birds.filter(bird =>
     bird.commonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    bird.scientificName.toLowerCase().includes(searchTerm.toLowerCase())
+    bird.scientificName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    bird.commonCode.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   if (loading) {
@@ -106,6 +109,7 @@ const Home = () => {
               scientificName={bird.scientificName}
               photoCount={bird.photoCount}
               featuredPhoto={bird.featuredPhoto}
+              commonCode={bird.commonCode}
             />
           ))}
         </div>

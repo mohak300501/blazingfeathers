@@ -7,11 +7,12 @@ interface BirdCardProps {
   scientificName: string
   photoCount: number
   featuredPhoto?: string
+  commonCode: string
 }
 
-const BirdCard = ({ id, commonName, scientificName, photoCount, featuredPhoto }: BirdCardProps) => {
+const BirdCard = ({ id, commonName, scientificName, photoCount, featuredPhoto, commonCode }: BirdCardProps) => {
   return (
-    <Link to={`/bird/${id}`}>
+    <Link to={`/bird/${commonCode.toLowerCase()}`}>
       <div className="bird-card group">
         <div className="relative h-48 bg-gray-200 overflow-hidden">
           {featuredPhoto ? (

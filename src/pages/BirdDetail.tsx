@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { doc, getDoc, collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { doc, getDoc, collection, getDocs, query, orderBy, where } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { useAuth } from '../contexts/AuthContext'
 import PhotoCard from '../components/PhotoCard'
@@ -25,7 +25,7 @@ interface Photo {
 }
 
 const BirdDetail = () => {
-  const { id } = useParams<{ id: string }>()
+  const { commonCode } = useParams<{ commonCode: string }>()
   const { user } = useAuth()
   const [bird, setBird] = useState<BirdData | null>(null)
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -35,17 +35,21 @@ const BirdDetail = () => {
 
   useEffect(() => {
     const fetchBirdData = async () => {
-      if (!id) return
+      if (!commonCode) return
 
       try {
-        // Fetch bird data
-        const birdDoc = await getDoc(doc(db, 'birds', id))
-        if (!birdDoc.exists()) {
+        // Fetch bird data by commonCode
+        const birdsQuery = query(collection(db, 'birds'), where('commonCode', '==', commonCode.toUpperCase()))
+        const birdsSnapshot = await getDocs(birdsQuery)
+        
+        if (birdsSnapshot.empty) {
           toast.error('Bird not found')
           return
         }
 
+        const birdDoc = birdsSnapshot.docs[0]
         const birdData = birdDoc.data()
+        
         setBird({
           id: birdDoc.id,
           commonName: birdData.commonName,
@@ -54,7 +58,7 @@ const BirdDetail = () => {
         })
 
         // Fetch photos
-        const photosQuery = query(collection(db, 'birds', id, 'photos'), orderBy('dateOfCapture', 'desc'))
+        const photosQuery = query(collection(db, 'birds', birdDoc.id, 'photos'), orderBy('dateOfCapture', 'desc'))
         const photosSnapshot = await getDocs(photosQuery)
         
         const photosData: Photo[] = []
@@ -80,7 +84,7 @@ const BirdDetail = () => {
     }
 
     fetchBirdData()
-  }, [id])
+  }, [commonCode])
 
   const handlePhotoDelete = async (photoId: string) => {
     try {
@@ -91,7 +95,7 @@ const BirdDetail = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          birdId: id,
+          birdId: bird?.id,
           photoId: photoId,
           userId: user?.uid
         }),
@@ -115,7 +119,7 @@ const BirdDetail = () => {
   }
 
   const handlePhotoUpload = async (formData: FormData) => {
-    if (!user || !id) return
+    if (!user || !bird) return
 
     setUploading(true)
     try {
@@ -151,7 +155,7 @@ const BirdDetail = () => {
           fileData: base64Data,
           fileName: file.name,
           contentType: file.type,
-          birdId: id,
+          birdId: bird.id,
           userId: user.uid,
           location: location,
           dateOfCapture: dateOfCapture,
