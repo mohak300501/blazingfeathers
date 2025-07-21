@@ -23,11 +23,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-// Admin emails list from environment variables
-const ADMIN_EMAILS = import.meta.env.VITE_ADMIN_EMAILS 
-  ? import.meta.env.VITE_ADMIN_EMAILS.split(',').map(email => email.trim())
-  : ['admin@blazingfeathers.com'] // fallback default
-
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (context === undefined) {
@@ -45,29 +40,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
-      
       if (user) {
-        // Check if user is admin
-        const isUserAdmin = ADMIN_EMAILS.includes(user.email || '')
-        setIsAdmin(isUserAdmin)
-        
-        // Get username from Firestore
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid))
           if (userDoc.exists()) {
-            setUsername(userDoc.data().username)
+            const data = userDoc.data()
+            setUsername(data.username)
+            setIsAdmin(!!data.isAdmin)
+          } else {
+            setUsername(null)
+            setIsAdmin(false)
           }
         } catch (error) {
-          console.error('Error fetching username:', error)
+          console.error('Error fetching user data:', error)
+          setUsername(null)
+          setIsAdmin(false)
         }
       } else {
         setIsAdmin(false)
         setUsername(null)
       }
-      
       setLoading(false)
     })
-
     return unsubscribe
   }, [])
 
@@ -94,18 +88,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
-      
-      // Send email verification
       await sendEmailVerification(user)
-      
-      // Save user data to Firestore
+      // Save user data to Firestore (isAdmin not set here)
       await setDoc(doc(db, 'users', user.uid), {
         username,
         email,
-        createdAt: new Date(),
-        isAdmin: ADMIN_EMAILS.includes(email)
+        createdAt: new Date()
       })
-      
       toast.success('Registration successful! Please check your email to verify your account.')
     } catch (error: any) {
       console.error('Registration error:', error)
