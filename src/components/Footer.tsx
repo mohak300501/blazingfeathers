@@ -1,11 +1,41 @@
 import { Github, ExternalLink } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 const Footer = () => {
   const currentYear = new Date().getFullYear()
+  const [stats, setStats] = useState({ totalBirds: 0, totalPhotos: 0, totalUsers: 0 })
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/.netlify/functions/adminStats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        if (response.ok) {
+          const data = await response.json()
+          setStats({
+            totalBirds: data.totalBirds,
+            totalPhotos: data.totalPhotos,
+            totalUsers: data.totalUsers
+          })
+        }
+      } catch (e) {
+        // fail silently
+      }
+    }
+    fetchStats()
+  }, [])
 
   return (
     <footer className="bg-white border-t border-gray-200 mt-auto">
       <div className="container mx-auto px-4 py-6">
+        {/* System Stats */}
+        <div className="flex flex-col md:flex-row justify-center items-center space-y-2 md:space-y-0 md:space-x-8 mb-4">
+          <div className="text-sm text-gray-700"><b>{stats.totalBirds}</b> Birds</div>
+          <div className="text-sm text-gray-700"><b>{stats.totalPhotos}</b> Photos</div>
+          <div className="text-sm text-gray-700"><b>{stats.totalUsers}</b> Users</div>
+        </div>
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           {/* Copyright */}
           <div className="text-sm text-gray-600">

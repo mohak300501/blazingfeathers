@@ -89,11 +89,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
       await sendEmailVerification(user)
-      // Save user data to Firestore (isAdmin not set here)
+      // Save user data to Firestore (isAdmin defaults to false)
       await setDoc(doc(db, 'users', user.uid), {
         username,
         email,
-        createdAt: new Date()
+        createdAt: new Date(),
+        isAdmin: false
       })
       toast.success('Registration successful! Please check your email to verify your account.')
     } catch (error: any) {
