@@ -1,5 +1,6 @@
 import { Github, ExternalLink, Bird, Camera, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 const Footer = () => {
   const currentYear = new Date().getFullYear()
@@ -52,6 +53,24 @@ const Footer = () => {
           </div>
           {/* Links */}
           <div className="flex items-center space-x-6">
+            <Link
+              to="/about"
+              className="text-sm text-gray-600 hover:text-blue-700 transition-colors"
+            >
+              About
+            </Link>
+            <Link
+              to="/guidelines"
+              className="text-sm text-gray-600 hover:text-blue-700 transition-colors"
+            >
+              Guidelines
+            </Link>
+            <Link
+              to="/terms"
+              className="text-sm text-gray-600 hover:text-blue-700 transition-colors"
+            >
+              Terms & Conditions
+            </Link>
             <a
               href="https://github.com/mohak300501/blazingfeathers"
               target="_blank"
