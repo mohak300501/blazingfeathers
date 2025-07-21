@@ -69,13 +69,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
-      
       if (!user.emailVerified) {
         toast.error('Please verify your email before logging in')
         await signOut(auth)
         return
       }
-      
       toast.success('Successfully logged in!')
     } catch (error: any) {
       console.error('Login error:', error)
@@ -97,6 +95,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin: false
       })
       toast.success('Registration successful! Please check your email to verify your account.')
+      // Do not log in user immediately after registration
+      await signOut(auth)
     } catch (error: any) {
       console.error('Registration error:', error)
       toast.error(error.message || 'Failed to register')

@@ -1,4 +1,4 @@
-import { Github, ExternalLink } from 'lucide-react'
+import { Github, ExternalLink, Bird, Camera, Users } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 const Footer = () => {
@@ -8,7 +8,7 @@ const Footer = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/.netlify/functions/adminStats', {
+        const response = await fetch('/.netlify/functions/publicStats', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
         })
@@ -32,16 +32,24 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-6">
         {/* System Stats */}
         <div className="flex flex-col md:flex-row justify-center items-center space-y-2 md:space-y-0 md:space-x-8 mb-4">
-          <div className="text-sm text-gray-700"><b>{stats.totalBirds}</b> Birds</div>
-          <div className="text-sm text-gray-700"><b>{stats.totalPhotos}</b> Photos</div>
-          <div className="text-sm text-gray-700"><b>{stats.totalUsers}</b> Users</div>
+          <div className="flex items-center space-x-2 text-sm text-gray-700">
+            <Bird className="h-5 w-5 text-primary-600" />
+            <b>{stats.totalBirds}</b> Birds
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-700">
+            <Camera className="h-5 w-5 text-bird-600" />
+            <b>{stats.totalPhotos}</b> Photos
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-700">
+            <Users className="h-5 w-5 text-green-600" />
+            <b>{stats.totalUsers}</b> Users
+          </div>
         </div>
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           {/* Copyright */}
           <div className="text-sm text-gray-600">
             © {currentYear} IITR Bird-watching Community
           </div>
-
           {/* Links */}
           <div className="flex items-center space-x-6">
             <a
