@@ -12,6 +12,7 @@ import Terms from './pages/Terms'
 const Home = lazy(() => import('./pages/Home'))
 const Login = lazy(() => import('./pages/Login'))
 const Register = lazy(() => import('./pages/Register'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const BirdDetail = lazy(() => import('./pages/BirdDetail'))
 const AdminPanel = lazy(() => import('./pages/AdminPanel'))
 
@@ -37,6 +38,7 @@ function App() {
               <>
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
               </>
             )}
             {user && (

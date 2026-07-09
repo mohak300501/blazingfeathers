@@ -5,7 +5,8 @@ import {
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged,
-  sendEmailVerification
+  sendEmailVerification,
+  sendPasswordResetEmail
 } from 'firebase/auth'
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
@@ -19,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   register: (username: string, email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  resetPassword: (email: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -115,6 +117,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
+  const resetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email)
+      toast.success('Password reset email sent! Check your inbox.')
+    } catch (error: any) {
+      console.error('Password reset error:', error)
+      toast.error(error.message || 'Failed to send password reset email')
+      throw error
+    }
+  }
+
   const value = {
     user,
     loading,
@@ -122,7 +135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     username,
     login,
     register,
-    logout
+    logout,
+    resetPassword
   }
 
   return (
