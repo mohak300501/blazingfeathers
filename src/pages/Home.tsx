@@ -9,7 +9,7 @@ interface Bird {
   id: string
   commonName: string
   scientificName: string
-  familyName?: string
+  familyName: string
   photoCount: number
   featuredPhoto?: string
   commonCode: string
@@ -33,7 +33,7 @@ const Home = () => {
             id: doc.id,
             commonName: data.commonName,
             scientificName: data.scientificName,
-            familyName: data.familyName || 'Uncategorized',
+            familyName: data.familyName,
             photoCount: data.photoCount || 0,
             featuredPhoto: data.featuredPhoto,
             commonCode: data.commonCode || ''
