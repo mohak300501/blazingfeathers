@@ -8,7 +8,7 @@ interface Bird {
   id: string
   commonName: string
   scientificName: string
-  familyName?: string
+  familyName: string
   photoCount: number
   commonCode: string
 }
@@ -377,7 +377,7 @@ const AddBirdModal = ({ onClose, onAdd, adding }: AddBirdModalProps) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Family Name
+              Family Name *
             </label>
             <input
               type="text"
@@ -385,6 +385,7 @@ const AddBirdModal = ({ onClose, onAdd, adding }: AddBirdModalProps) => {
               onChange={(e) => setFamilyName(e.target.value)}
               className="input-field"
               placeholder="e.g., Coraciidae"
+              required
             />
           </div>
 
@@ -489,7 +490,7 @@ const EditBirdModal = ({ bird, onClose, onEdit, editing }: EditBirdModalProps) =
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Family Name
+              Family Name *
             </label>
             <input
               type="text"
@@ -497,6 +498,7 @@ const EditBirdModal = ({ bird, onClose, onEdit, editing }: EditBirdModalProps) =
               onChange={(e) => setFamilyName(e.target.value)}
               className="input-field"
               placeholder="e.g., Coraciidae"
+              required
             />
           </div>
 
