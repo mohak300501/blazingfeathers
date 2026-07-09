@@ -58,6 +58,7 @@ exports.handler = async (event, context) => {
         id: doc.id,
         commonName: data.commonName,
         scientificName: data.scientificName,
+        familyName: data.familyName || '',
         commonCode: data.commonCode || '',
         photoCount: data.photoCount || 0
       });
