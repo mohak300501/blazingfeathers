@@ -9,6 +9,7 @@ interface Bird {
   id: string
   commonName: string
   scientificName: string
+  familyName?: string
   photoCount: number
   featuredPhoto?: string
   commonCode: string
@@ -32,6 +33,7 @@ const Home = () => {
             id: doc.id,
             commonName: data.commonName,
             scientificName: data.scientificName,
+            familyName: data.familyName || 'Uncategorized',
             photoCount: data.photoCount || 0,
             featuredPhoto: data.featuredPhoto,
             commonCode: data.commonCode || ''
@@ -53,8 +55,18 @@ const Home = () => {
   const filteredBirds = birds.filter(bird =>
     bird.commonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     bird.scientificName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    bird.commonCode.toLowerCase().includes(searchTerm.toLowerCase())
+    bird.commonCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (bird.familyName && bird.familyName.toLowerCase().includes(searchTerm.toLowerCase()))
   )
+
+  const groupedBirds = filteredBirds.reduce((acc, bird) => {
+    const family = bird.familyName || 'Uncategorized'
+    if (!acc[family]) acc[family] = []
+    acc[family].push(bird)
+    return acc
+  }, {} as Record<string, Bird[]>)
+
+  const sortedFamilies = Object.keys(groupedBirds).sort()
 
   if (loading) {
     return <LoadingSpinner />
@@ -86,7 +98,7 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Birds Grid */}
+      {/* Birds Grid grouped by Family Name */}
       {filteredBirds.length === 0 ? (
         <div className="text-center py-12">
           <Bird className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -101,17 +113,24 @@ const Home = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredBirds.map((bird) => (
-            <BirdCard
-              key={bird.id}
-              id={bird.id}
-              commonName={bird.commonName}
-              scientificName={bird.scientificName}
-              photoCount={bird.photoCount}
-              featuredPhoto={bird.featuredPhoto}
-              commonCode={bird.commonCode}
-            />
+        <div className="space-y-12">
+          {sortedFamilies.map(family => (
+            <div key={family}>
+              <h2 className="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">{family}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {groupedBirds[family].map((bird) => (
+                  <BirdCard
+                    key={bird.id}
+                    id={bird.id}
+                    commonName={bird.commonName}
+                    scientificName={bird.scientificName}
+                    photoCount={bird.photoCount}
+                    featuredPhoto={bird.featuredPhoto}
+                    commonCode={bird.commonCode}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -126,4 +145,4 @@ const Home = () => {
   )
 }
 
-export default Home 
+export default Home

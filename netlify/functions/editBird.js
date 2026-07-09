@@ -47,12 +47,11 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    // Initialize dependencies
     await initializeDependencies();
     
-    const { commonName, scientificName, familyName, userId } = JSON.parse(event.body);
+    const { birdId, commonName, scientificName, familyName, userId } = JSON.parse(event.body);
 
-    if (!commonName || !scientificName || !userId) {
+    if (!birdId || !commonName || !scientificName || !userId) {
       return {
         statusCode: 400,
         headers,
@@ -60,7 +59,6 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Check if user is admin
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
       return {
@@ -81,62 +79,73 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Check if bird already exists (case-insensitive)
-    const birdsQuery = await db.collection('birds')
-      .where('commonName', '==', commonName)
-      .get();
-
-    if (!birdsQuery.empty) {
+    const birdRef = db.collection('birds').doc(birdId);
+    const birdDoc = await birdRef.get();
+    
+    if (!birdDoc.exists) {
       return {
-        statusCode: 409,
+        statusCode: 404,
         headers,
-        body: JSON.stringify({ error: 'Bird with this common name already exists' }),
+        body: JSON.stringify({ error: 'Bird not found' }),
       };
     }
 
-    // Get all existing commonCodes to ensure uniqueness
-    const allBirdsQuery = await db.collection('birds').get();
-    const existingCodes = [];
-    allBirdsQuery.forEach(doc => {
-      const data = doc.data();
-      if (data.commonCode) {
-        existingCodes.push(data.commonCode);
-      }
-    });
-
-    // Generate unique commonCode
-    const commonCode = generateUniqueCommonCode(commonName, existingCodes);
-
-    // Add bird to Firestore
-    const birdRef = await db.collection('birds').add({
+    const currentData = birdDoc.data();
+    
+    // Check if commonName changed to generate a new commonCode
+    let updateData = {
       commonName: commonName.trim(),
       scientificName: scientificName.trim(),
       familyName: familyName ? familyName.trim() : 'Uncategorized',
-      commonCode: commonCode,
-      photoCount: 0,
-      createdAt: new Date(),
-      addedBy: userId,
-      addedByUsername: userData.username
-    });
+      updatedAt: new Date(),
+    };
+
+    if (currentData.commonName !== commonName.trim()) {
+      // Check if new commonName already exists
+      const birdsQuery = await db.collection('birds')
+        .where('commonName', '==', commonName.trim())
+        .get();
+
+      if (!birdsQuery.empty) {
+        return {
+          statusCode: 409,
+          headers,
+          body: JSON.stringify({ error: 'Bird with this common name already exists' }),
+        };
+      }
+
+      // Get all existing commonCodes
+      const allBirdsQuery = await db.collection('birds').get();
+      const existingCodes = [];
+      allBirdsQuery.forEach(doc => {
+        const data = doc.data();
+        if (data.commonCode && doc.id !== birdId) {
+          existingCodes.push(data.commonCode);
+        }
+      });
+
+      const newCommonCode = generateUniqueCommonCode(commonName.trim(), existingCodes);
+      updateData.commonCode = newCommonCode;
+    }
+
+    await birdRef.update(updateData);
 
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        birdId: birdRef.id,
-        commonName,
-        scientificName,
-        commonCode
+        birdId,
+        ...updateData
       }),
     };
 
   } catch (error) {
-    console.error('Error adding bird:', error);
+    console.error('Error editing bird:', error);
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ error: 'Internal server error' }),
     };
   }
-}; 
+};

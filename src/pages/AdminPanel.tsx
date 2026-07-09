@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { Bird, Plus, Trash2, Settings, Users, Camera } from 'lucide-react'
+import { Bird, Plus, Trash2, Settings, Users, Camera, Edit2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Bird {
   id: string
   commonName: string
   scientificName: string
+  familyName?: string
   photoCount: number
   commonCode: string
 }
@@ -25,6 +26,9 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingBird, setEditingBird] = useState<Bird | null>(null)
+  const [editing, setEditing] = useState(false)
 
   useEffect(() => {
     if (!isAdmin) {
@@ -61,7 +65,7 @@ const AdminPanel = () => {
         totalPhotos: data.totalPhotos,
         totalUsers: data.totalUsers
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching public data:', error)
       toast.error('Failed to load public data')
     } finally {
@@ -69,7 +73,7 @@ const AdminPanel = () => {
     }
   }
 
-  const handleAddBird = async (commonName: string, scientificName: string) => {
+  const handleAddBird = async (commonName: string, scientificName: string, familyName: string) => {
     setAdding(true)
     try {
       // Call Netlify function to add bird
@@ -81,6 +85,7 @@ const AdminPanel = () => {
         body: JSON.stringify({
           commonName,
           scientificName,
+          familyName,
           userId: user?.uid
         }),
       })
@@ -90,11 +95,11 @@ const AdminPanel = () => {
         throw new Error(errorData.error || 'Failed to add bird')
       }
 
-      const result = await response.json()
+      await response.json()
       toast.success('Bird added successfully!')
       setShowAddModal(false)
       fetchData() // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding bird:', error)
       toast.error(error.message || 'Failed to add bird')
     } finally {
@@ -102,8 +107,43 @@ const AdminPanel = () => {
     }
   }
 
+  const handleEditBird = async (birdId: string, commonName: string, scientificName: string, familyName: string) => {
+    setEditing(true)
+    try {
+      // Call Netlify function to edit bird
+      const response = await fetch('/.netlify/functions/editBird', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          birdId,
+          commonName,
+          scientificName,
+          familyName,
+          userId: user?.uid
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to edit bird')
+      }
+
+      await response.json()
+      toast.success('Bird updated successfully!')
+      setShowEditModal(false)
+      fetchData() // Refresh data
+    } catch (error: any) {
+      console.error('Error editing bird:', error)
+      toast.error(error.message || 'Failed to edit bird')
+    } finally {
+      setEditing(false)
+    }
+  }
+
   const handleDeleteBird = async (birdId: string, birdName: string) => {
-    if (!confirm(`Are you sure you want to delete "${birdName}"? This will also delete all associated photos.`)) {
+    if (!window.confirm(`Are you sure you want to delete "${birdName}"? This will also delete all associated photos.`)) {
       return
     }
 
@@ -126,13 +166,11 @@ const AdminPanel = () => {
 
       toast.success('Bird deleted successfully!')
       fetchData() // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting bird:', error)
       toast.error('Failed to delete bird')
     }
   }
-
-
 
   if (!isAdmin) {
     return (
@@ -187,6 +225,9 @@ const AdminPanel = () => {
                     Scientific Name
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Family Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Common Code
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -206,6 +247,9 @@ const AdminPanel = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 italic">
                       {bird.scientificName}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {bird.familyName || 'Uncategorized'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
                       {bird.commonCode}
                     </td>
@@ -213,13 +257,25 @@ const AdminPanel = () => {
                       {bird.photoCount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => handleDeleteBird(bird.id, bird.commonName)}
-                        className="text-red-600 hover:text-red-900 flex items-center space-x-1"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span>Delete</span>
-                      </button>
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => {
+                            setEditingBird(bird)
+                            setShowEditModal(true)
+                          }}
+                          className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBird(bird.id, bird.commonName)}
+                          className="text-red-600 hover:text-red-900 flex items-center space-x-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -237,6 +293,19 @@ const AdminPanel = () => {
           adding={adding}
         />
       )}
+
+      {/* Edit Bird Modal */}
+      {showEditModal && editingBird && (
+        <EditBirdModal
+          bird={editingBird}
+          onClose={() => {
+            setShowEditModal(false)
+            setEditingBird(null)
+          }}
+          onEdit={handleEditBird}
+          editing={editing}
+        />
+      )}
     </div>
   )
 }
@@ -244,23 +313,24 @@ const AdminPanel = () => {
 // Add Bird Modal Component
 interface AddBirdModalProps {
   onClose: () => void
-  onAdd: (commonName: string, scientificName: string) => Promise<void>
+  onAdd: (commonName: string, scientificName: string, familyName: string) => Promise<void>
   adding: boolean
 }
 
 const AddBirdModal = ({ onClose, onAdd, adding }: AddBirdModalProps) => {
   const [commonName, setCommonName] = useState('')
   const [scientificName, setScientificName] = useState('')
+  const [familyName, setFamilyName] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!commonName || !scientificName) {
-      toast.error('Please fill in all fields')
+      toast.error('Please fill in required fields')
       return
     }
 
-    await onAdd(commonName, scientificName)
+    await onAdd(commonName, scientificName, familyName)
   }
 
   return (
@@ -279,29 +349,42 @@ const AddBirdModal = ({ onClose, onAdd, adding }: AddBirdModalProps) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Common Name
+              Common Name *
             </label>
             <input
               type="text"
               value={commonName}
               onChange={(e) => setCommonName(e.target.value)}
               className="input-field"
-              placeholder="e.g., American Robin"
+              placeholder="e.g., Indian Roller"
               required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Scientific Name
+              Scientific Name *
             </label>
             <input
               type="text"
               value={scientificName}
               onChange={(e) => setScientificName(e.target.value)}
               className="input-field"
-              placeholder="e.g., Turdus migratorius"
+              placeholder="e.g., Coracias benghalensis"
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Family Name
+            </label>
+            <input
+              type="text"
+              value={familyName}
+              onChange={(e) => setFamilyName(e.target.value)}
+              className="input-field"
+              placeholder="e.g., Coraciidae"
             />
           </div>
 
@@ -338,4 +421,116 @@ const AddBirdModal = ({ onClose, onAdd, adding }: AddBirdModalProps) => {
   )
 }
 
-export default AdminPanel 
+// Edit Bird Modal Component
+interface EditBirdModalProps {
+  bird: Bird
+  onClose: () => void
+  onEdit: (id: string, commonName: string, scientificName: string, familyName: string) => Promise<void>
+  editing: boolean
+}
+
+const EditBirdModal = ({ bird, onClose, onEdit, editing }: EditBirdModalProps) => {
+  const [commonName, setCommonName] = useState(bird.commonName)
+  const [scientificName, setScientificName] = useState(bird.scientificName)
+  const [familyName, setFamilyName] = useState(bird.familyName || '')
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!commonName || !scientificName) {
+      toast.error('Please fill in required fields')
+      return
+    }
+
+    await onEdit(bird.id, commonName, scientificName, familyName)
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-md w-full p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">Edit Bird</h3>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600"
+          >
+            ×
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Common Name *
+            </label>
+            <input
+              type="text"
+              value={commonName}
+              onChange={(e) => setCommonName(e.target.value)}
+              className="input-field"
+              placeholder="e.g., Indian Roller"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Scientific Name *
+            </label>
+            <input
+              type="text"
+              value={scientificName}
+              onChange={(e) => setScientificName(e.target.value)}
+              className="input-field"
+              placeholder="e.g., Coracias benghalensis"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Family Name
+            </label>
+            <input
+              type="text"
+              value={familyName}
+              onChange={(e) => setFamilyName(e.target.value)}
+              className="input-field"
+              placeholder="e.g., Coraciidae"
+            />
+          </div>
+
+          <div className="flex space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary flex-1"
+              disabled={editing}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={editing}
+              className="btn-primary flex-1 flex justify-center items-center space-x-2"
+            >
+              {editing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Edit2 className="h-4 w-4" />
+                  <span>Save Changes</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+export default AdminPanel

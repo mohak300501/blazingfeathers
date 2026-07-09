@@ -101,8 +101,7 @@ exports.handler = async (event, context) => {
     }
 
     const userData = userDoc.data();
-    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(email => email.trim()) : ['admin@blazingfeathers.com'];
-    const isAdmin = adminEmails.includes(userData.email);
+    const isAdmin = userData.isAdmin === true;
 
     if (!isAdmin && photoData.uploadedBy !== userId) {
       return {
