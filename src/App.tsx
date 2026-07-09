@@ -4,6 +4,9 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import LoadingSpinner from './components/LoadingSpinner'
 import { lazy, Suspense } from 'react'
+import About from './pages/About'
+import Guidelines from './pages/Guidelines'
+import Terms from './pages/Terms'
 
 // Lazy load pages
 const Home = lazy(() => import('./pages/Home'))
@@ -27,6 +30,9 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/bird/:commonCode" element={<BirdDetail />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/guidelines" element={<Guidelines />} />
+            <Route path="/terms" element={<Terms />} />
             {!user && (
               <>
                 <Route path="/login" element={<Login />} />

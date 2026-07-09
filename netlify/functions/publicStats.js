@@ -4,7 +4,6 @@ let admin, db;
 async function initializeDependencies() {
   if (!admin) {
     admin = require('firebase-admin');
-    
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert({
@@ -14,7 +13,6 @@ async function initializeDependencies() {
         }),
       });
     }
-    
     db = admin.firestore();
   }
 }
@@ -24,7 +22,7 @@ exports.handler = async (event, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   };
 
   if (event.httpMethod === 'OPTIONS') {
@@ -35,7 +33,7 @@ exports.handler = async (event, context) => {
     };
   }
 
-  if (event.httpMethod !== 'POST') {
+  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
     return {
       statusCode: 405,
       headers,
@@ -46,46 +44,14 @@ exports.handler = async (event, context) => {
   try {
     // Initialize dependencies
     await initializeDependencies();
-    
-    const { userId } = JSON.parse(event.body);
 
-    if (!userId) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ error: 'Missing userId' }),
-      };
-    }
-
-    // Check if user is admin
-    const userDoc = await db.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify({ error: 'User not found' }),
-      };
-    }
-
-    const userData = userDoc.data();
-    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(email => email.trim()) : ['admin@blazingfeathers.com'];
-    const isAdmin = adminEmails.includes(userData.email);
-
-    if (!isAdmin) {
-      return {
-        statusCode: 403,
-        headers,
-        body: JSON.stringify({ error: 'Admin privileges required' }),
-      };
-    }
-
-    // Fetch admin statistics
+    // Fetch statistics (no auth required)
     const birdsSnapshot = await db.collection('birds').get();
     const usersSnapshot = await db.collection('users').get();
-    
+
     let totalPhotos = 0;
     const birdsData = [];
-    
+
     birdsSnapshot.forEach((doc) => {
       const data = doc.data();
       birdsData.push({
@@ -112,7 +78,7 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Error fetching admin stats:', error);
+    console.error('Error fetching public stats:', error);
     return {
       statusCode: 500,
       headers,

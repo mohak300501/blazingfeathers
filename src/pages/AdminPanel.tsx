@@ -153,34 +153,7 @@ const AdminPanel = () => {
       {/* Header */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold text-gray-900">Admin Panel</h1>
-        <p className="text-xl text-gray-600">Manage birds and view system statistics</p>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card text-center">
-          <div className="flex justify-center mb-4">
-            <Bird className="h-8 w-8 text-primary-600" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900">{stats.totalBirds}</h3>
-          <p className="text-gray-600">Total Birds</p>
-        </div>
-        
-        <div className="card text-center">
-          <div className="flex justify-center mb-4">
-            <Camera className="h-8 w-8 text-bird-600" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900">{stats.totalPhotos}</h3>
-          <p className="text-gray-600">Total Photos</p>
-        </div>
-        
-        <div className="card text-center">
-          <div className="flex justify-center mb-4">
-            <Users className="h-8 w-8 text-green-600" />
-          </div>
-          <h3 className="text-2xl font-bold text-gray-900">{stats.totalUsers}</h3>
-          <p className="text-gray-600">Registered Users</p>
-        </div>
+        <p className="text-xl text-gray-600">Manage birds and admin features</p>
       </div>
 
       {/* Birds Management */}

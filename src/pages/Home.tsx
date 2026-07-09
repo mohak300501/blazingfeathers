@@ -64,7 +64,7 @@ const Home = () => {
     <div className="space-y-8">
       {/* Hero Section */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl md:text-6xl font-bold text-gradient leading-tight">
+        <h1 className="section-header leading-tight">
           Blazing Feathers
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -75,13 +75,13 @@ const Home = () => {
       {/* Search Bar */}
       <div className="max-w-md mx-auto">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-400 h-5 w-5" />
           <input
             type="text"
             placeholder="Search birds..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-3 border-2 border-blue-200 bg-white bg-opacity-80 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent shadow"
           />
         </div>
       </div>

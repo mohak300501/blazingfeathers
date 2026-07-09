@@ -254,7 +254,7 @@ const BirdDetail = () => {
     <div className="space-y-8">
       {/* Bird Header */}
       <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-gray-900">{bird.commonName}</h1>
+        <h1 className="section-header">{bird.commonName}</h1>
         <p className="text-xl text-gray-600 italic">{bird.scientificName}</p>
         <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
           <div className="flex items-center space-x-1">

@@ -17,13 +17,13 @@ const Navbar = () => {
   }
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-gradient-to-r from-indigo-100 via-blue-50 to-emerald-100 shadow-sm border-b border-blue-100">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
             <Bird className="h-8 w-8 text-primary-600" />
-            <span className="text-xl font-bold text-gradient">Blazing Feathers</span>
+            <span className="text-xl font-bold section-header bg-clip-text text-transparent">Blazing Feathers</span>
           </Link>
 
           {/* Desktop Navigation Links */}
