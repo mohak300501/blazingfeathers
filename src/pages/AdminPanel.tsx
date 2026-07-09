@@ -37,8 +37,8 @@ const AdminPanel = () => {
 
   const fetchData = async () => {
     try {
-      // Call Netlify function to fetch admin data
-      const response = await fetch('/.netlify/functions/adminStats', {
+      // Call Netlify function to fetch public data
+      const response = await fetch('/.netlify/functions/publicStats', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -50,7 +50,7 @@ const AdminPanel = () => {
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to fetch admin data')
+        throw new Error(errorData.error || 'Failed to fetch public data')
       }
 
       const data = await response.json()
@@ -62,8 +62,8 @@ const AdminPanel = () => {
         totalUsers: data.totalUsers
       })
     } catch (error) {
-      console.error('Error fetching admin data:', error)
-      toast.error('Failed to load admin data')
+      console.error('Error fetching public data:', error)
+      toast.error('Failed to load public data')
     } finally {
       setLoading(false)
     }
