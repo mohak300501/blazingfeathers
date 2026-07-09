@@ -248,7 +248,7 @@ const AdminPanel = () => {
                       {bird.scientificName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {bird.familyName || 'Uncategorized'}
+                      {bird.familyName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
                       {bird.commonCode}
@@ -433,7 +433,7 @@ interface EditBirdModalProps {
 const EditBirdModal = ({ bird, onClose, onEdit, editing }: EditBirdModalProps) => {
   const [commonName, setCommonName] = useState(bird.commonName)
   const [scientificName, setScientificName] = useState(bird.scientificName)
-  const [familyName, setFamilyName] = useState(bird.familyName || '')
+  const [familyName, setFamilyName] = useState(bird.familyName)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

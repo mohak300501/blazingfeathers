@@ -60,7 +60,7 @@ const Home = () => {
   )
 
   const groupedBirds = filteredBirds.reduce((acc, bird) => {
-    const family = bird.familyName || 'Uncategorized'
+    const family = bird.familyName
     if (!acc[family]) acc[family] = []
     acc[family].push(bird)
     return acc
